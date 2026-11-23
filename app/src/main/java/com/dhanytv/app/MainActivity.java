@@ -81,6 +81,12 @@ public class MainActivity extends Activity {
             }
         });
 
+        // Pemutar web memanggil ini saat pengguna menekan "Ya, Keluar"
+        web.addJavascriptInterface(new Object() {
+            @android.webkit.JavascriptInterface
+            public void exit() { runOnUiThread(() -> finish()); }
+        }, "DhanyTV");
+
         immersive();
         web.loadUrl(prefs.getString("url", DEFAULT_URL));
     }
@@ -133,14 +139,26 @@ public class MainActivity extends Activity {
         return super.onKeyDown(keyCode, e);
     }
 
+    private void confirmExit() {
+        if (dialogOpen || isFinishing()) return;
+        dialogOpen = true;
+        new AlertDialog.Builder(this)
+                .setTitle("Yakin ingin keluar?")
+                .setMessage("Siaran yang sedang diputar akan dihentikan. Masih banyak saluran lain yang menunggu.")
+                .setPositiveButton("Ya, Keluar", (d, w) -> finish())
+                .setNegativeButton("Batal", null)
+                .setOnDismissListener(d -> { dialogOpen = false; immersive(); })
+                .show();
+    }
+
     @Override
     public void onBackPressed() {
         if (customView != null) {
             web.getWebChromeClient().onHideCustomView();
         } else if (web.canGoBack()) {
-            web.goBack();
+            web.goBack();            // pemutar web yang menangani Kembali & menampilkan konfirmasi keluar
         } else {
-            super.onBackPressed();
+            confirmExit();           // cadangan: halaman gagal dimuat
         }
     }
 
