@@ -18,9 +18,9 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 
 public class MainActivity extends Activity {
-    // Alamat server DhanyTV (Termux di HP). Bisa diganti dari dalam aplikasi: tekan tombol MENU pada remote
-    // atau akan muncul otomatis kalau server tidak bisa dihubungi.
-    private static final String DEFAULT_URL = "http://192.168.0.101:3000/";
+
+    // Alamat server bawaan diatur dari panel admin > Pembuat APK (res/values/strings.xml); bisa diubah di dalam aplikasi lewat tombol MENU.
+    private String defUrl() { return getString(R.string.default_url); }
 
     private FrameLayout root;
     private WebView web;
@@ -85,10 +85,16 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(new Object() {
             @android.webkit.JavascriptInterface
             public void exit() { runOnUiThread(() -> finish()); }
+            @android.webkit.JavascriptInterface
+            public void setName(final String n) {
+                runOnUiThread(() -> {
+                    try { setTaskDescription(new android.app.ActivityManager.TaskDescription(n)); } catch (Throwable t) { }
+                });
+            }
         }, "DhanyTV");
 
         immersive();
-        web.loadUrl(prefs.getString("url", DEFAULT_URL));
+        web.loadUrl(prefs.getString("url", defUrl()));
     }
 
     private void immersive() {
@@ -112,7 +118,7 @@ public class MainActivity extends Activity {
         dialogOpen = true;
         final EditText in = new EditText(this);
         in.setSingleLine(true);
-        in.setText(prefs.getString("url", DEFAULT_URL));
+        in.setText(prefs.getString("url", defUrl()));
         new AlertDialog.Builder(this)
                 .setTitle("Alamat server DhanyTV")
                 .setMessage(message == null ? "Contoh: http://192.168.0.101:3000/" : message)
@@ -125,7 +131,7 @@ public class MainActivity extends Activity {
                         web.loadUrl(u);
                     }
                 })
-                .setNegativeButton("Coba lagi", (d, w) -> web.loadUrl(prefs.getString("url", DEFAULT_URL)))
+                .setNegativeButton("Coba lagi", (d, w) -> web.loadUrl(prefs.getString("url", defUrl())))
                 .setOnDismissListener(d -> { dialogOpen = false; immersive(); })
                 .show();
     }

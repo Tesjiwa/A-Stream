@@ -1,7 +1,8 @@
 name: Build APK
 on:
-  push:
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -11,11 +12,25 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - name: Kunci tanda tangan tetap
+        run: |
+          if [ ! -f app/dhanytv.keystore ]; then
+            keytool -genkeypair -keystore app/dhanytv.keystore -storepass android -keypass android \
+              -alias dhanytv -keyalg RSA -keysize 2048 -validity 36500 -dname "CN=DhanyTV"
+            git config user.name "github-actions"
+            git config user.email "actions@github.com"
+            git add app/dhanytv.keystore
+            git commit -m "Kunci tanda tangan APK"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.7
       - run: gradle assembleDebug --no-daemon
-      - uses: actions/upload-artifact@v4
-        with:
-          name: DhanyTV-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+      - name: Terbitkan APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk DhanyTV.apk
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest DhanyTV.apk --title "DhanyTV APK terbaru" --notes "Dibuat otomatis dari panel admin."

@@ -10,10 +10,22 @@ android {
         applicationId 'com.dhanytv.app'
         minSdk 23
         targetSdk 34
-        versionCode 1
+        versionCode((System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger())
         versionName '1.0'
     }
+    // Kunci tanda tangan tetap (dibuat otomatis sekali oleh workflow) supaya APK baru bisa menimpa yang lama
+    signingConfigs {
+        dtv {
+            storeFile file('dhanytv.keystore')
+            storePassword 'android'
+            keyAlias 'dhanytv'
+            keyPassword 'android'
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig file('dhanytv.keystore').exists() ? signingConfigs.dtv : signingConfigs.debug
+        }
         release { minifyEnabled false }
     }
     compileOptions {
