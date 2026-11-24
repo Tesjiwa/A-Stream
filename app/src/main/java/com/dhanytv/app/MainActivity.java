@@ -120,6 +120,12 @@ public class MainActivity extends Activity {
             @android.webkit.JavascriptInterface
             public void exit() { runOnUiThread(() -> finish()); }
             @android.webkit.JavascriptInterface
+            public void rotate(final boolean land) {
+                runOnUiThread(() -> setRequestedOrientation(land
+                        ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                        : android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED));
+            }
+            @android.webkit.JavascriptInterface
             public void setName(final String n) {
                 runOnUiThread(() -> {
                     try { setTaskDescription(new android.app.ActivityManager.TaskDescription(n)); } catch (Throwable t) { }
