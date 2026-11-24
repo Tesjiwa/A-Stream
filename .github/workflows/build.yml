@@ -33,4 +33,11 @@ jobs:
         run: |
           cp app/build/outputs/apk/debug/app-debug.apk DhanyTV.apk
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest DhanyTV.apk --title "DhanyTV APK terbaru" --notes "Dibuat otomatis dari panel admin."
+          {
+            echo "## DhanyTV APK"
+            echo "Dibangun otomatis dari panel admin: build #${{ github.run_number }}, $(date -u +'%d %b %Y %H:%M UTC')."
+            echo
+            echo "**Cara pasang:** unduh DhanyTV.apk, izinkan pemasangan dari sumber tidak dikenal, lalu buka."
+            echo "Di TV: ketik alamat server + /apk di browser atau aplikasi Downloader."
+          } > notes.md
+          gh release create latest DhanyTV.apk --title "DhanyTV APK terbaru" --notes-file notes.md
