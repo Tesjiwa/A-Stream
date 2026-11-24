@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -17,6 +18,7 @@ import android.view.WindowManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -27,10 +29,20 @@ import android.widget.ImageView;
 import java.io.ByteArrayOutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends Activity {
 
     private static final String OFFLINE_BASE = "http://offline.local/";
+
+    // Halaman dimuat dari alamat https "virtual" supaya WebView menganggapnya konteks aman. DRM (EME: ClearKey/Widevine)
+    // hanya aktif di https/localhost, sedangkan alamat server di LAN (http://192.168.x.x:3000) tidak aman.
+    // Hanya halaman utamanya yang diambil lewat sini; API dan video tetap langsung ke server (?server=...).
+    // ".invalid" tidak pernah punya DNS, jadi tidak ada permintaan yang bocor ke internet.
+    private static final String SECURE_HOST = "app.dhanytv.invalid";
+    private static final String SECURE_BASE = "https://" + SECURE_HOST + "/";
 
     // Alamat server bawaan diatur dari panel admin > Pembuat APK (res/values/strings.xml);
     // bisa diubah di dalam aplikasi: tombol MENU, atau tahan OK saat layar "server offline".
@@ -75,11 +87,21 @@ public class MainActivity extends Activity {
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
+        s.setSupportZoom(false);
+        s.setBuiltInZoomControls(false);
+        s.setDisplayZoomControls(false);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         s.setCacheMode(WebSettings.LOAD_DEFAULT);
 
         web.setWebViewClient(new WebViewClient() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
+                Uri uri = r.getUrl();
+                if (uri != null && SECURE_HOST.equals(uri.getHost())) return fromServer(r);
+                return super.shouldInterceptRequest(v, r);
+            }
+
             @Override
             public void onReceivedError(WebView v, WebResourceRequest r, WebResourceError e) {
                 if (r.isForMainFrame()) showOffline();
@@ -94,6 +116,17 @@ public class MainActivity extends Activity {
         });
 
         web.setWebChromeClient(new WebChromeClient() {
+            // Widevine di WebView butuh izin "ID media terlindungi". Hanya itu yang diizinkan; kamera/mikrofon ditolak.
+            @Override
+            public void onPermissionRequest(final android.webkit.PermissionRequest request) {
+                java.util.ArrayList<String> ok = new java.util.ArrayList<>();
+                for (String res : request.getResources()) {
+                    if (android.webkit.PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID.equals(res)) ok.add(res);
+                }
+                if (ok.isEmpty()) request.deny();
+                else request.grant(ok.toArray(new String[0]));
+            }
+
             @Override
             public void onShowCustomView(View view, CustomViewCallback cb) {
                 if (customView != null) { cb.onCustomViewHidden(); return; }
@@ -134,8 +167,47 @@ public class MainActivity extends Activity {
         }, "DhanyTV");
 
         immersive();
-        web.loadUrl(serverUrl());
+        loadApp(serverUrl());
         ui.postDelayed(this::hideSplash, 15000);       // jaring pengaman: splash tidak menggantung selamanya
+    }
+
+    /* ---------- muat aplikasi lewat asal https virtual ---------- */
+    // Server http biasa (mis. http://192.168.x.x:3000) -> dibuka lewat https virtual + ?server=...
+    // Server https, atau localhost/127.x (sudah konteks aman) -> dibuka langsung seperti biasa.
+    private void loadApp(String u) {
+        String low = u.trim().toLowerCase(java.util.Locale.ROOT);
+        boolean direct = low.startsWith("https://")
+                || low.matches("^http://(localhost|127\\.\\d+\\.\\d+\\.\\d+)(:\\d+)?(/.*)?$");
+        if (direct) { web.loadUrl(u); return; }
+        try {
+            web.loadUrl(SECURE_BASE + "?server=" + URLEncoder.encode(u.trim(), "UTF-8"));
+        } catch (Exception e) {
+            web.loadUrl(u);
+        }
+    }
+
+    // Dipanggil WebView (thread latar belakang) untuk alamat https virtual: ambil halaman utama dari server.
+    private WebResourceResponse fromServer(WebResourceRequest r) {
+        String p = r.getUrl().getPath();
+        boolean page = p == null || p.isEmpty() || "/".equals(p) || "/index.html".equals(p) || "/dhanytv.html".equals(p);
+        if (!"GET".equalsIgnoreCase(r.getMethod()) || !page) {
+            return new WebResourceResponse("text/plain", "utf-8", 204, "No Content",
+                    new HashMap<String, String>(), new java.io.ByteArrayInputStream(new byte[0]));
+        }
+        try {
+            String base = serverUrl().trim().replaceAll("/+$", "");
+            HttpURLConnection c = (HttpURLConnection) new URL(base + "/").openConnection();
+            c.setConnectTimeout(5000);
+            c.setReadTimeout(15000);
+            c.setRequestProperty("Cache-Control", "no-cache");
+            if (c.getResponseCode() != 200) { c.disconnect(); return null; }
+            Map<String, String> h = new HashMap<>();
+            h.put("Cache-Control", "no-store");
+            return new WebResourceResponse("text/html", "utf-8", 200, "OK", h, c.getInputStream());
+        } catch (Exception e) {
+            // gagal: biarkan WebView mencoba alamat aslinya (tidak ada DNS) -> onReceivedError -> layar "server offline" + coba lagi
+            return null;
+        }
     }
 
     /* ---------- splash ---------- */
@@ -208,7 +280,7 @@ public class MainActivity extends Activity {
                     if (up) {
                         offline = false;
                         showSplashAgain();
-                        web.loadUrl(serverUrl());
+                        loadApp(serverUrl());
                     } else {
                         ui.postDelayed(retry, 4000);
                     }
@@ -225,6 +297,18 @@ public class MainActivity extends Activity {
                         | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                         | View.SYSTEM_UI_FLAG_FULLSCREEN
                         | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+    }
+
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration c) {
+        super.onConfigurationChanged(c);
+        immersive();
+        // setelah memutar layar: paksa WebView menghitung ulang ukuran supaya video tidak bergeser / membesar
+        ui.postDelayed(() -> {
+            if (web == null) return;
+            web.requestLayout();
+            web.evaluateJavascript("window.dispatchEvent(new Event('resize'))", null);
+        }, 350);
     }
 
     @Override
@@ -250,7 +334,7 @@ public class MainActivity extends Activity {
                         prefs.edit().putString("url", u).apply();
                         offline = false;
                         showSplashAgain();
-                        web.loadUrl(u);
+                        loadApp(u);
                     }
                 })
                 .setNegativeButton("Batal", null)
