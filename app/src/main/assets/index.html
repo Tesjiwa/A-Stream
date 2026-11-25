@@ -692,12 +692,14 @@ function next(){
   if(id!==S.aid)return;
   var a=S.att[S.ai++];if(!a)return dead();
   var s=S.cur.s[a.i],url=a.px?BASE+s.p:s.u;
+  var vm=String(s.u||'').match(/^https?:\/\/(?:[^\/]+\.trycloudflare\.com|vidio123\.mikrofast\.web\.id|127\.0\.0\.1(?::\d+)?|localhost(?::\d+)?)(\/vidio\/\d+\/index\.mpd(?:[?#].*)?)$/i);
+  if(vm&&BASE){url=BASE+vm[1];}
   S.curA={c:S.cur.i,u:s.u,px:a.px?1:0};
   var tag=(a.px?'proxy':'langsung')+(S.cur.s.length>1?' #'+(a.i+1):'');
   var base0=BASE;
   var fail=function(why){if(id!==S.aid)return;S.errs.push(tag+': '+(typeof why==='string'?why:'gagal/timeout'));next()};
   /* sumber via proxy gagal & tunnel ternyata sudah berganti alamat -> ambil server.json lagi, ulangi sumber yang sama (sekali per saluran) */
-  var bad=S.bad=function(why){if(id!==S.aid)return;if(!a.px||S.rcv)return fail(why);S.rcv=1;
+  var bad=S.bad=function(why){if(id!==S.aid)return;if((!a.px&&!vm)||S.rcv)return fail(why);S.rcv=1;
    tunnelLost(base0).then(function(ch){if(id!==S.aid)return;if(ch){S.ai--;S.errs.push(tag+': tunnel berganti, diulang');next()}else fail(why)},function(){fail(why)})};
   state('spin',S.cur.n,S.ai>1?'Mencoba sumber lain…':'Menyambungkan siaran…');
   /* batas waktu pemutaran (di luar waktu mengunduh pustaka pemutar) */
