@@ -46,6 +46,9 @@ public class MainActivity extends Activity {
     private static final String SECURE_HOST = "app.dhanytv.invalid";
     private static final String SECURE_BASE = "https://" + SECURE_HOST + "/";
 
+    // Repositori GitHub tempat start_tunnel.py menulis server.json (alamat Cloudflare Quick Tunnel terbaru)
+    private static final String GH_REPO = "Tesjiwa/A-Stream";
+
     // Alamat server bawaan diatur dari panel admin > Pembuat APK (res/values/strings.xml);
     // bisa diubah di dalam aplikasi: tombol MENU, atau tahan OK saat layar "server offline".
     private String defUrl() { return getString(R.string.default_url); }
@@ -215,20 +218,73 @@ public class MainActivity extends Activity {
             return new WebResourceResponse("text/plain", "utf-8", 204, "No Content",
                     new HashMap<String, String>(), new java.io.ByteArrayInputStream(new byte[0]));
         }
-        try {
-            String base = serverUrl().trim().replaceAll("/+$", "");
-            HttpURLConnection c = (HttpURLConnection) new URL(base + "/").openConnection();
-            c.setConnectTimeout(5000);
-            c.setReadTimeout(15000);
-            c.setRequestProperty("Cache-Control", "no-cache");
-            if (c.getResponseCode() != 200) { c.disconnect(); return null; }
-            Map<String, String> h = new HashMap<>();
-            h.put("Cache-Control", "no-store");
-            return new WebResourceResponse("text/html", "utf-8", 200, "OK", h, c.getInputStream());
-        } catch (Exception e) {
-            // gagal: biarkan WebView mencoba alamat aslinya (tidak ada DNS) -> onReceivedError -> layar "server offline" + coba lagi
-            return null;
+        for (int k = 0; k < 2; k++) {
+            try {
+                String base = serverUrl().trim().replaceAll("/+$", "");
+                HttpURLConnection c = (HttpURLConnection) new URL(base + "/").openConnection();
+                c.setConnectTimeout(5000);
+                c.setReadTimeout(15000);
+                c.setRequestProperty("Cache-Control", "no-cache");
+                if (c.getResponseCode() != 200) { c.disconnect(); throw new java.io.IOException("HTTP"); }
+                Map<String, String> h = new HashMap<>();
+                h.put("Cache-Control", "no-store");
+                return new WebResourceResponse("text/html", "utf-8", 200, "OK", h, c.getInputStream());
+            } catch (Exception e) {
+                // gagal: tunnel mungkin sudah berganti alamat -> ambil server.json dari GitHub, lalu coba sekali lagi
+                String before = serverUrl();
+                if (k == 0 && refreshFromGithub() && !before.equals(serverUrl())) continue;
+                // tetap gagal: biarkan WebView mencoba alamat aslinya (tidak ada DNS) -> onReceivedError -> layar "server offline" + coba lagi
+                return null;
+            }
         }
+        return null;
+    }
+
+    // Alamat tunnel (Cloudflare Quick Tunnel) berganti setiap server dinyalakan: start_tunnel.py menulis alamat terbaru
+    // ke server.json di repositori GitHub. Panggil HANYA dari thread latar belakang. true bila server.json terbaca.
+    private boolean refreshFromGithub() {
+        if (GH_REPO == null || GH_REPO.isEmpty()) return false;
+        String[] urls = {
+                "https://api.github.com/repos/" + GH_REPO + "/contents/server.json",
+                "https://raw.githubusercontent.com/" + GH_REPO + "/HEAD/server.json?t=" + System.currentTimeMillis()
+        };
+        for (int i = 0; i < urls.length; i++) {
+            try {
+                HttpURLConnection c = (HttpURLConnection) new URL(urls[i]).openConnection();
+                c.setConnectTimeout(6000);
+                c.setReadTimeout(8000);
+                c.setRequestProperty("Cache-Control", "no-cache");
+                if (i == 0) c.setRequestProperty("Accept", "application/vnd.github.raw");
+                if (c.getResponseCode() != 200) { c.disconnect(); continue; }
+                ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                java.io.InputStream in = c.getInputStream();
+                byte[] buf = new byte[1024];
+                int n;
+                while ((n = in.read(buf)) > 0 && bo.size() < 65536) bo.write(buf, 0, n);
+                c.disconnect();
+                java.util.regex.Matcher m = java.util.regex.Pattern
+                        .compile("\"server_url\"\\s*:\\s*\"(https?://[A-Za-z0-9.:-]+)\"")
+                        .matcher(bo.toString("UTF-8"));
+                if (m.find()) {
+                    String u = m.group(1);
+                    if (!u.equals(serverUrl())) prefs.edit().putString("url", u).apply();
+                    return true;
+                }
+            } catch (Exception e) { /* coba sumber berikutnya */ }
+        }
+        return false;
+    }
+
+    // Server DhanyTV benar-benar menjawab? (/api/ping; tunnel yang mati menjawab 530, bukan 200)
+    private boolean reachable(String u) {
+        try {
+            HttpURLConnection c = (HttpURLConnection) new URL(u.trim().replaceAll("/+$", "") + "/api/ping").openConnection();
+            c.setConnectTimeout(3000);
+            c.setReadTimeout(3000);
+            boolean ok = c.getResponseCode() == 200;
+            c.disconnect();
+            return ok;
+        } catch (Exception e) { return false; }
     }
 
     /* ---------- splash ---------- */
@@ -294,14 +350,8 @@ public class MainActivity extends Activity {
             if (!offline || isFinishing()) return;
             final String u = serverUrl();
             new Thread(() -> {
-                boolean ok = false;
-                try {
-                    HttpURLConnection c = (HttpURLConnection) new URL(u).openConnection();
-                    c.setConnectTimeout(2500);
-                    c.setReadTimeout(2500);
-                    ok = c.getResponseCode() > 0;
-                    c.disconnect();
-                } catch (Exception e) { /* masih offline */ }
+                boolean ok = reachable(u);
+                if (!ok && refreshFromGithub()) ok = reachable(serverUrl());     // tunnel berganti alamat?
                 final boolean up = ok;
                 runOnUiThread(() -> {
                     if (!offline || isFinishing()) return;
