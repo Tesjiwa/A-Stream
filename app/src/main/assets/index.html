@@ -426,11 +426,13 @@ function recover(old){
 }
 function tunnelLost(old){if(BASE!==old)return Promise.resolve(true);return ping(BASE).then(function(ok){return ok?false:recover(old)})}
 /* fetch ke server; gagal sambung / error tunnel (530, 502-504 pada /api) -> cari alamat baru lalu ulangi sekali */
-function F(path,o){
+function F(path,o){window._DTV_BASE=BASE;
  return READY.then(function(){
   function go(again){
    var b0=BASE;
+   o=o||{};var hh=Object.assign({},o.headers||{});var tk=(localStorage.getItem('dtv_tok')||'');if(tk)hh['X-DTV-Token']=tk;o.headers=hh;
    return fetch(b0+path,o).then(function(r){
+    if(r.status===401&&path!=='/api/auth'&&window._askPin){window._askPin();}
     if(!again&&(r.status===530||(path.indexOf('/api/')===0&&(r.status===502||r.status===503||r.status===504))))
      return recover(b0).then(function(ch){return ch?go(true):r});
     return r;
@@ -692,8 +694,9 @@ function next(){
   if(id!==S.aid)return;
   var a=S.att[S.ai++];if(!a)return dead();
   var s=S.cur.s[a.i],url=a.px?BASE+s.p:s.u;
-  var vm=String(s.u||'').match(/^https?:\/\/(?:[^\/]+\.trycloudflare\.com|vidio123\.mikrofast\.web\.id|127\.0\.0\.1(?::\d+)?|localhost(?::\d+)?)(\/vidio\/\d+\/index\.mpd(?:[?#].*)?)$/i);
-  if(vm&&BASE){url=BASE+vm[1];}
+  var vm=String(s.u||'').match(/^https?:\/\/(?:[^\/]+\.trycloudflare\.com|vidio123\.mikrofast\.web\.id|127\.0\.0\.1(?::\d+)?|localhost(?::\d+)?)(\/(?:vidio\/\d+\/index\.mpd|rctiplus\/[a-zA-Z0-9_-]+\/index\.m3u8)(?:[?#].*)?)$/i);
+  if(vm){url=(BASE||location.origin)+vm[1];a.px=0;}
+  var _tk=(localStorage.getItem('dtv_tok')||'');if(_tk&&url&&/^https?:\/\/(?:localhost|127\.0\.0\.1|[^\/]+\.trycloudflare\.com)/i.test(url)){url+=(url.indexOf('?')>=0?'&':'?')+'dtv_tok='+encodeURIComponent(_tk);}
   S.curA={c:S.cur.i,u:s.u,px:a.px?1:0};
   var tag=(a.px?'proxy':'langsung')+(S.cur.s.length>1?' #'+(a.i+1):'');
   var base0=BASE;
@@ -733,7 +736,7 @@ function tryPlay(){
 }
 function playHls(src,bad){
  if(window.Hls&&Hls.isSupported()){
-  var h=S.hls=new Hls({enableWorker:true,lowLatencyMode:false,startFragPrefetch:true,abrEwmaDefaultEstimate:1500000,maxBufferLength:30,maxMaxBufferLength:60,backBufferLength:10,capLevelToPlayerSize:true,liveSyncDurationCount:3,abrBandWidthFactor:.8,abrBandWidthUpFactor:.6,startLevel:0,fragLoadingTimeOut:20000,fragLoadingMaxRetry:4,fragLoadingRetryDelay:500,manifestLoadingTimeOut:10000,manifestLoadingMaxRetry:1,manifestLoadingRetryDelay:500,levelLoadingTimeOut:10000,levelLoadingMaxRetry:2,levelLoadingRetryDelay:500});
+  var h=S.hls=new Hls({xhrSetup:function(xhr){var t=localStorage.getItem('dtv_tok');if(t)xhr.setRequestHeader('X-DTV-Token',t);},enableWorker:true,lowLatencyMode:false,startFragPrefetch:true,abrEwmaDefaultEstimate:1500000,maxBufferLength:30,maxMaxBufferLength:60,backBufferLength:10,capLevelToPlayerSize:true,liveSyncDurationCount:3,abrBandWidthFactor:.8,abrBandWidthUpFactor:.6,startLevel:0,fragLoadingTimeOut:20000,fragLoadingMaxRetry:4,fragLoadingRetryDelay:500,manifestLoadingTimeOut:10000,manifestLoadingMaxRetry:1,manifestLoadingRetryDelay:500,levelLoadingTimeOut:10000,levelLoadingMaxRetry:2,levelLoadingRetryDelay:500});
   var rec=0;S.mv=null;S.mvLock=false;S.mvCur=-1;S.mvSrc=src;
   h.on(Hls.Events.MANIFEST_LOADED,function(_,d){if(S.mvLock||!d||!d.levels)return;S.mv=d.levels.map(function(l){return{u:(l.url instanceof Array?l.url[0]:l.url),w:l.width||0,h:l.height||0,b:l.bitrate||0,n:l.name||''}})});
   h.loadSource(src);h.attachMedia(v);
@@ -1101,5 +1104,141 @@ boot();
 setInterval(refresh,60000);
 })();
 </script>
+
+<style>
+#dtvPinGate{position:fixed;inset:0;z-index:99999;background:#070b14;display:none;align-items:center;justify-content:center;padding:24px;font-family:system-ui,-apple-system,sans-serif;color:#f8fafc;user-select:none}
+#dtvPinGate.show{display:flex}
+.pg-wrap{width:100%;max-width:320px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.pg-badge{width:54px;height:54px;border-radius:50%;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.28);display:flex;align-items:center;justify-content:center;margin-bottom:18px;color:#38bdf8}
+.pg-badge svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.pg-wrap h3{margin:0 0 6px;font-size:20px;font-weight:600;letter-spacing:-.2px;color:#fff}
+.pg-wrap p{margin:0 0 26px;font-size:13px;color:#94a3b8;line-height:1.45}
+.pg-dots{display:flex;justify-content:center;gap:18px;margin-bottom:14px;height:22px;align-items:center}
+.pg-dot{width:13px;height:13px;border-radius:50%;border:2px solid #334155;background:transparent;transition:all .18s ease}
+.pg-dot.on{background:#38bdf8;border-color:#38bdf8;transform:scale(1.22);box-shadow:0 0 12px rgba(56,189,248,.55)}
+.pg-dots.shake{animation:pgShake .32s ease}
+@keyframes pgShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.pg-err{min-height:20px;font-size:12.5px;color:#f87171;margin-bottom:20px}
+.pg-pad{display:grid;grid-template-columns:repeat(3,72px);gap:14px 20px;justify-content:center}
+.pg-btn{width:72px;height:72px;border-radius:50%;border:0;background:rgba(255,255,255,.06);color:#f8fafc;font-size:24px;font-weight:500;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .12s,background .15s,box-shadow .15s;-webkit-tap-highlight-color:transparent}
+.pg-btn:hover{background:rgba(255,255,255,.11)}
+.pg-btn:active{transform:scale(.93);background:#0284c7;color:#fff}
+.pg-btn:focus,.pg-btn:focus-visible{outline:none;background:#0284c7;color:#fff;transform:scale(1.08);box-shadow:0 0 0 3px rgba(56,189,248,.45)}
+.pg-btn.fn{background:transparent;color:#94a3b8;font-size:13px;font-weight:600}
+.pg-btn.fn:focus,.pg-btn.fn:focus-visible{background:rgba(56,189,248,.18);color:#38bdf8;box-shadow:0 0 0 2px rgba(56,189,248,.4)}
+.pg-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media (min-width:768px) and (orientation:landscape){
+  .pg-wrap{max-width:680px;flex-direction:row;justify-content:space-between;text-align:left;gap:48px}
+  .pg-info{flex:1}
+  .pg-badge{margin:0 0 16px}
+  .pg-dots{justify-content:flex-start}
+}
+</style>
+<div id="dtvPinGate" role="dialog" aria-modal="true" aria-label="Kunci Akses PIN">
+  <div class="pg-wrap">
+    <div class="pg-info">
+      <div class="pg-badge"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <h3>Masukkan PIN Akses</h3>
+      <p>Lihat 4 digit PIN di Termux server.<br>Gunakan remote TV atau sentuh layar.</p>
+      <div class="pg-dots" id="pgDots"><div class="pg-dot"></div><div class="pg-dot"></div><div class="pg-dot"></div><div class="pg-dot"></div></div>
+      <div class="pg-err" id="pgErr"></div>
+    </div>
+    <div class="pg-pad" id="pgPad">
+      <button type="button" class="pg-btn" data-k="1" data-r="0" data-c="0">1</button>
+      <button type="button" class="pg-btn" data-k="2" data-r="0" data-c="1">2</button>
+      <button type="button" class="pg-btn" data-k="3" data-r="0" data-c="2">3</button>
+      <button type="button" class="pg-btn" data-k="4" data-r="1" data-c="0">4</button>
+      <button type="button" class="pg-btn" data-k="5" data-r="1" data-c="1">5</button>
+      <button type="button" class="pg-btn" data-k="6" data-r="1" data-c="2">6</button>
+      <button type="button" class="pg-btn" data-k="7" data-r="2" data-c="0">7</button>
+      <button type="button" class="pg-btn" data-k="8" data-r="2" data-c="1">8</button>
+      <button type="button" class="pg-btn" data-k="9" data-r="2" data-c="2">9</button>
+      <button type="button" class="pg-btn fn" data-k="C" data-r="3" data-c="0">Reset</button>
+      <button type="button" class="pg-btn" data-k="0" data-r="3" data-c="1">0</button>
+      <button type="button" class="pg-btn fn" data-k="B" data-r="3" data-c="2" aria-label="Hapus"><svg viewBox="0 0 24 24"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg></button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var val='', busy=false;
+  var gate=document.getElementById('dtvPinGate');
+  var dotsBox=document.getElementById('pgDots');
+  var dots=dotsBox.children;
+  var err=document.getElementById('pgErr');
+  var pad=document.getElementById('pgPad');
+  function paint(){
+    for(var i=0;i<4;i++){dots[i].classList.toggle('on',!!val[i]);}
+  }
+  function failAnim(msg){
+    err.textContent=msg;
+    dotsBox.classList.remove('shake');
+    void dotsBox.offsetWidth;
+    dotsBox.classList.add('shake');
+  }
+  function submitPin(){
+    if(busy||val.length!==4)return;
+    busy=true;err.textContent='Memverifikasi...';
+    try{
+      var targetBase = window._DTV_BASE || localStorage.getItem('dtv_srv') || (location.protocol.indexOf('http')===0 ? location.origin : '');
+      fetch(targetBase+'/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:val})})
+      .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}})})
+      .then(function(res){
+        busy=false;
+        if(res.ok&&res.j&&res.j.token){
+          localStorage.setItem('dtv_tok',res.j.token);
+          val='';paint();err.textContent='';
+          gate.classList.remove('show');
+          location.reload();
+        }else{
+          val='';paint();failAnim('PIN salah, cek layar Termux.');
+        }
+      }).catch(function(e){
+        busy=false;val='';paint();failAnim('Gagal terhubung: '+(e&&e.message?e.message:'cek server'));
+      });
+    }catch(ex){
+      busy=false;val='';paint();failAnim('Error: '+ex.message);
+    }
+  }
+  function press(k){
+    if(busy)return;
+    err.textContent='';
+    if(k==='C'){val='';paint();return;}
+    if(k==='B'){val=val.slice(0,-1);paint();return;}
+    if(/^\d$/.test(k)&&val.length<4){
+      val+=k;paint();
+      if(val.length===4)submitPin();
+    }
+  }
+  pad.addEventListener('click',function(e){
+    var b=e.target.closest('button');if(b)press(b.getAttribute('data-k'));
+  });
+  document.addEventListener('keydown',function(e){
+    if(!gate.classList.contains('show'))return;
+    if(e.key>='0'&&e.key<='9'){e.preventDefault();press(e.key);return;}
+    if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();press('B');return;}
+    var cur=document.activeElement;
+    if(!cur||!pad.contains(cur)){
+      var b1=pad.querySelector('[data-k="1"]');if(b1)b1.focus();return;
+    }
+    var r=parseInt(cur.getAttribute('data-r'),10), c=parseInt(cur.getAttribute('data-c'),10);
+    if(e.key==='ArrowRight'){e.preventDefault();c=(c+1)%3;}
+    else if(e.key==='ArrowLeft'){e.preventDefault();c=(c+2)%3;}
+    else if(e.key==='ArrowDown'){e.preventDefault();r=(r+1)%4;}
+    else if(e.key==='ArrowUp'){e.preventDefault();r=(r+3)%4;}
+    else return;
+    var nxt=pad.querySelector('[data-r="'+r+'"][data-c="'+c+'"]');
+    if(nxt)nxt.focus();
+  },true);
+  window._askPin=function(){
+    localStorage.removeItem('dtv_tok');
+    if(!gate.classList.contains('show')){
+      val='';paint();gate.classList.add('show');
+      setTimeout(function(){var b1=pad.querySelector('[data-k="1"]');if(b1)b1.focus();},60);
+    }
+  };
+})();
+</script>
+
 </body>
 </html>
