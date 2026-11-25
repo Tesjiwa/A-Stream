@@ -1,9 +1,9 @@
 <!-- Dibuat otomatis oleh panel admin (Pembuat APK). Perubahan manual akan tertimpa saat APK dibangun lagi. -->
 <p align="center">
-  <img src="docs/banner.png" alt="AdhitTV" width="100%">
+  <img src="docs/banner.png" alt="A-Stream" width="100%">
 </p>
 
-<h1 align="center">AdhitTV</h1>
+<h1 align="center">A-Stream</h1>
 
 <p align="center">
   Pemutar IPTV ringan untuk <b>Android TV</b>, HP, dan browser.<br>
@@ -11,14 +11,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Tesjiwa/DhanyTV-Android/actions/workflows/build.yml"><img alt="Build" src="https://github.com/Tesjiwa/DhanyTV-Android/actions/workflows/build.yml/badge.svg"></a>
+  <a href="https://github.com/Tesjiwa/A-Stream/actions/workflows/build.yml"><img alt="Build" src="https://github.com/Tesjiwa/A-Stream/actions/workflows/build.yml/badge.svg"></a>
   <img alt="Platform" src="https://img.shields.io/badge/Android%20TV-6.0%2B-3DDC84?logo=android&logoColor=white">
   <img alt="Lisensi" src="https://img.shields.io/badge/lisensi-MIT-blue">
-  <a href="https://github.com/Tesjiwa/DhanyTV-Android/releases/latest"><img alt="Rilis terbaru" src="https://img.shields.io/github/release-date/Tesjiwa/DhanyTV-Android?label=rilis%20terbaru"></a>
+  <a href="https://github.com/Tesjiwa/A-Stream/releases/latest"><img alt="Rilis terbaru" src="https://img.shields.io/github/release-date/Tesjiwa/A-Stream?label=rilis%20terbaru"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Tesjiwa/DhanyTV-Android/releases/latest/download/DhanyTV.apk"><b>⬇️ Unduh APK terbaru</b></a>
+  <a href="https://github.com/Tesjiwa/A-Stream/releases/latest/download/A-Stream.apk"><b>⬇️ Unduh APK terbaru</b></a>
 </p>
 
 ---
@@ -71,7 +71,7 @@ docs/                Gambar dokumentasi
 
 ## ⚖️ Penafian
 
-AdhitTV hanyalah pemutar. Proyek ini **tidak menyertakan, menghosting, atau mendistribusikan** saluran maupun konten apa pun. Playlist yang dimuat sepenuhnya milik dan tanggung jawab pengguna, jadi pastikan kamu berhak mengakses sumbernya.
+A-Stream hanyalah pemutar. Proyek ini **tidak menyertakan, menghosting, atau mendistribusikan** saluran maupun konten apa pun. Playlist yang dimuat sepenuhnya milik dan tanggung jawab pengguna, jadi pastikan kamu berhak mengakses sumbernya.
 
 ## 📄 Lisensi
 

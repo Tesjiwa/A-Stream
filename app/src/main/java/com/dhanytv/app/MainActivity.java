@@ -25,6 +25,8 @@ import android.webkit.WebViewClient;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.TextView;
+import android.os.SystemClock;
 
 import java.io.ByteArrayOutputStream;
 import java.net.HttpURLConnection;
@@ -58,6 +60,10 @@ public class MainActivity extends Activity {
     private boolean dialogOpen = false;
     private boolean offline = false;
     private boolean splashGone = false;
+    // Layar pembuka minimal tampil sekian milidetik supaya logo sempat terlihat jelas
+    private static final long MIN_SPLASH_MS = 3000;
+    private long splashAt = 0;
+    private final Runnable hideSplashRun = new Runnable() { @Override public void run() { hideSplash(); } };
     private final Handler ui = new Handler(Looper.getMainLooper());
 
     @Override
@@ -76,10 +82,25 @@ public class MainActivity extends Activity {
         // Layar pembuka: hanya logo kecil di tengah
         splash = new FrameLayout(this);
         splash.setBackgroundColor(0xFF0B0D1C);
+        splashAt = SystemClock.uptimeMillis();
         ImageView logo = new ImageView(this);
-        logo.setImageResource(R.drawable.ic_launcher);
-        int sz = (int) (72 * getResources().getDisplayMetrics().density);
+        logo.setImageResource(R.drawable.splash_logo);
+        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        float dn = getResources().getDisplayMetrics().density;
+        int sz = (int) (170 * dn);
         splash.addView(logo, new FrameLayout.LayoutParams(sz, sz, Gravity.CENTER));
+        logo.setAlpha(0f);
+        logo.setScaleX(0.85f);
+        logo.setScaleY(0.85f);
+        logo.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(800).start();
+        TextView ver = new TextView(this);
+        ver.setTextColor(0x66FFFFFF);
+        ver.setTextSize(11);
+        try { ver.setText("v" + getPackageManager().getPackageInfo(getPackageName(), 0).versionName); } catch (Throwable t) { }
+        FrameLayout.LayoutParams vp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        vp.bottomMargin = (int) (24 * dn);
+        splash.addView(ver, vp);
         root.addView(splash, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(root);
@@ -213,12 +234,19 @@ public class MainActivity extends Activity {
     /* ---------- splash ---------- */
     private void hideSplash() {
         if (splashGone) return;
+        long left = MIN_SPLASH_MS - (SystemClock.uptimeMillis() - splashAt);
+        if (left > 0) {                      // belum cukup lama: tunda
+            ui.removeCallbacks(hideSplashRun);
+            ui.postDelayed(hideSplashRun, left);
+            return;
+        }
         splashGone = true;
         splash.animate().alpha(0f).setDuration(250).withEndAction(() -> splash.setVisibility(View.GONE)).start();
     }
 
     private void showSplashAgain() {
         splashGone = false;
+        splashAt = SystemClock.uptimeMillis() - (MIN_SPLASH_MS - 1200);     // muncul lagi: cukup ~1,2 detik
         splash.animate().cancel();
         splash.setAlpha(1f);
         splash.setVisibility(View.VISIBLE);
@@ -228,7 +256,7 @@ public class MainActivity extends Activity {
     /* ---------- layar "server offline" (tanpa alamat / tautan) ---------- */
     private String logoDataUri() {
         try {
-            Bitmap bm = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
+            Bitmap bm = BitmapFactory.decodeResource(getResources(), R.drawable.splash_logo);
             ByteArrayOutputStream bo = new ByteArrayOutputStream();
             bm.compress(Bitmap.CompressFormat.PNG, 100, bo);
             return "data:image/png;base64," + Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP);
@@ -243,7 +271,7 @@ public class MainActivity extends Activity {
         String html = "<html><head><meta name='viewport' content='width=device-width,initial-scale=1'><style>"
                 + "html,body{height:100%;margin:0;background:#0b0d1c;color:#9aa0c8;font-family:sans-serif}"
                 + "body{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}"
-                + "img{width:72px;height:72px;border-radius:16px}"
+                + "img{width:110px;height:110px;object-fit:contain}"
                 + "h1{font-size:18px;color:#eceefb;margin:22px 0 6px;font-weight:700}"
                 + "p{font-size:13px;margin:0}"
                 + ".d{display:inline-block;width:6px;height:6px;border-radius:50%;background:#0a86d8;margin:14px 3px 0;animation:b 1.2s infinite ease-in-out}"
