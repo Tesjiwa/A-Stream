@@ -432,7 +432,7 @@ function F(path,o){window._DTV_BASE=BASE;
    var b0=BASE;
    o=o||{};var hh=Object.assign({},o.headers||{});var tk=(localStorage.getItem('dtv_tok')||'');if(tk)hh['X-DTV-Token']=tk;o.headers=hh;
    return fetch(b0+path,o).then(function(r){
-    if(r.status===401&&path!=='/api/auth'&&window._askPin){window._askPin();}
+    if(r.status===401&&path!=='/api/auth'){window._NEED_PIN=true;if(window._askPin)window._askPin();}
     if(!again&&(r.status===530||(path.indexOf('/api/')===0&&(r.status===502||r.status===503||r.status===504))))
      return recover(b0).then(function(ch){return ch?go(true):r});
     return r;
@@ -1232,11 +1232,13 @@ setInterval(refresh,60000);
   },true);
   window._askPin=function(){
     localStorage.removeItem('dtv_tok');
+    var mE=document.getElementById('mE');if(mE)mE.hidden=true;
     if(!gate.classList.contains('show')){
       val='';paint();gate.classList.add('show');
       setTimeout(function(){var b1=pad.querySelector('[data-k="1"]');if(b1)b1.focus();},60);
     }
   };
+  if(window._NEED_PIN)window._askPin();
 })();
 </script>
 
