@@ -195,22 +195,23 @@ public class MainActivity extends Activity {
         ui.postDelayed(this::hideSplash, 15000);       // jaring pengaman: splash tidak menggantung selamanya
     }
 
-    /* ---------- muat aplikasi lewat asal https virtual ---------- */
-    // Server http biasa (mis. http://192.168.x.x:3000) -> dibuka lewat https virtual + ?server=...
-    // Server https, atau localhost/127.x (sudah konteks aman) -> dibuka langsung seperti biasa.
+    /* ---------- muat aplikasi dari aset lokal lewat asal https virtual ---------- */
+    // Halaman pemutar (dhanytv.html, tersimpan di assets/index.html) SELALU dimuat dari dalam aplikasi lewat alamat https
+    // virtual (konteks aman untuk DRM). Aplikasi tidak pernah membuka alamat server / trycloudflare.com sebagai halaman
+    // awal, jadi tunnel lama yang sudah mati tidak bisa memunculkan Cloudflare Error 1033. Setelah termuat, halaman
+    // sendiri mengambil server_url terbaru dari server.json di GitHub (repo GH_REPO) sebelum meminta playlist/stream.
+    // Alamat manual (mis. server LAN) tetap diteruskan lewat ?server=...; alamat trycloudflare.com TIDAK diteruskan
+    // karena berumur pendek, halaman mencarinya sendiri di GitHub.
     private void loadApp(String u) {
-        String low = u.trim().toLowerCase(java.util.Locale.ROOT);
-        boolean direct = low.startsWith("https://")
-                || low.matches("^http://(localhost|127\\.\\d+\\.\\d+\\.\\d+)(:\\d+)?(/.*)?$");
-        if (direct) { web.loadUrl(u); return; }
-        try {
-            web.loadUrl(SECURE_BASE + "?server=" + URLEncoder.encode(u.trim(), "UTF-8"));
-        } catch (Exception e) {
-            web.loadUrl(u);
+        String t = u == null ? "" : u.trim();
+        String q = "";
+        if (!t.isEmpty() && !t.toLowerCase(java.util.Locale.ROOT).matches("^https?://[^/]*\\.trycloudflare\\.com(:\\d+)?(/.*)?$")) {
+            try { q = "?server=" + URLEncoder.encode(t, "UTF-8"); } catch (Exception e) { q = ""; }
         }
+        web.loadUrl(SECURE_BASE + q);
     }
 
-    // Dipanggil WebView (thread latar belakang) untuk alamat https virtual: ambil halaman utama dari server.
+    // Dipanggil WebView (thread latar belakang) untuk alamat https virtual: sajikan halaman utama dari aset lokal.
     private WebResourceResponse fromServer(WebResourceRequest r) {
         String p = r.getUrl().getPath();
         boolean page = p == null || p.isEmpty() || "/".equals(p) || "/index.html".equals(p) || "/dhanytv.html".equals(p);
@@ -218,26 +219,13 @@ public class MainActivity extends Activity {
             return new WebResourceResponse("text/plain", "utf-8", 204, "No Content",
                     new HashMap<String, String>(), new java.io.ByteArrayInputStream(new byte[0]));
         }
-        for (int k = 0; k < 2; k++) {
-            try {
-                String base = serverUrl().trim().replaceAll("/+$", "");
-                HttpURLConnection c = (HttpURLConnection) new URL(base + "/").openConnection();
-                c.setConnectTimeout(5000);
-                c.setReadTimeout(15000);
-                c.setRequestProperty("Cache-Control", "no-cache");
-                if (c.getResponseCode() != 200) { c.disconnect(); throw new java.io.IOException("HTTP"); }
-                Map<String, String> h = new HashMap<>();
-                h.put("Cache-Control", "no-store");
-                return new WebResourceResponse("text/html", "utf-8", 200, "OK", h, c.getInputStream());
-            } catch (Exception e) {
-                // gagal: tunnel mungkin sudah berganti alamat -> ambil server.json dari GitHub, lalu coba sekali lagi
-                String before = serverUrl();
-                if (k == 0 && refreshFromGithub() && !before.equals(serverUrl())) continue;
-                // tetap gagal: biarkan WebView mencoba alamat aslinya (tidak ada DNS) -> onReceivedError -> layar "server offline" + coba lagi
-                return null;
-            }
+        try {
+            Map<String, String> h = new HashMap<>();
+            h.put("Cache-Control", "no-store");
+            return new WebResourceResponse("text/html", "utf-8", 200, "OK", h, getAssets().open("index.html"));
+        } catch (Exception e) {
+            return null;
         }
-        return null;
     }
 
     // Alamat tunnel (Cloudflare Quick Tunnel) berganti setiap server dinyalakan: start_tunnel.py menulis alamat terbaru

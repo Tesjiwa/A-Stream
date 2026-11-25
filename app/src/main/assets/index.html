@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#060813">
+<title>DhanyTV</title>
+<style>
+/* Sengaja tanpa dvh / inset / aspect-ratio / gap-flex / container query / clamp:
+   fitur itu tidak ada di WebView Android TV versi lama dan membuat tata letak runtuh. */
+:root{--bg:#070914;--glow:radial-gradient(ellipse at 15% 0%,rgba(70,100,255,.22),transparent 55%),radial-gradient(ellipse at 100% 100%,rgba(138,107,255,.14),transparent 50%);
+ --panel:#0e1126;--surf:#171b3a;--surf2:#202650;--tx:#eef0fc;--mut:#8e94c0;--line:rgba(255,255,255,.07);
+ --ac:#38a1ff;--ac2:#8a6bff;--live:#ff4d6d;--tileA:#2c3470;--tileB:#171b3c;--sel:rgba(90,130,255,.15);--chip:rgba(255,255,255,.08);
+ --shadow:0 .7rem 2rem rgba(0,0,0,.5);--grad:linear-gradient(115deg,#2f93f5,#7b5cf5)}
+:root[data-theme=light]{--bg:#e8ecf6;--glow:radial-gradient(ellipse at 15% 0%,rgba(90,140,255,.22),transparent 55%),radial-gradient(ellipse at 100% 100%,rgba(138,107,255,.14),transparent 50%);
+ --panel:#fff;--surf:#eff2fa;--surf2:#e2e7f4;--tx:#12162b;--mut:#646d98;--line:rgba(18,22,43,.08);--ac:#1479d8;--ac2:#6b4be0;
+ --tileA:#dde4f6;--tileB:#c9d3ee;--sel:rgba(47,140,255,.12);--chip:rgba(18,22,43,.06);--shadow:0 .7rem 1.8rem rgba(40,55,110,.18)}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;background:#000;color:var(--tx);overflow:hidden;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+button:focus,input:focus,.screen:focus{outline:none}
+svg{width:1em;height:1em;fill:currentColor;display:block}
+.wm{font-weight:800;letter-spacing:-.045em;display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.wm i{font-style:normal;background:var(--grad);color:#fff;border-radius:.3em;padding:0 .3em;margin-left:.12em;font-size:.8em;letter-spacing:0}
+
+/* ---------- tata letak: video membulat di kiri, daftar di kanan ---------- */
+#app{position:absolute;left:0;top:0;right:0;bottom:0;overflow:hidden;touch-action:none;display:flex;flex-direction:row;background:var(--bg);background-image:var(--glow)}
+.stage{flex:1;min-width:0;position:relative}
+.screen{position:absolute;left:1rem;top:1rem;right:.5rem;bottom:1rem;border-radius:1.1rem;overflow:hidden;background:#000;color:#fff;user-select:none;-webkit-user-select:none;box-shadow:var(--shadow)}
+video{position:absolute;left:0;top:0;width:100%;height:100%;display:block;object-fit:contain;background:#000}
+.panel{width:31%;min-width:22rem;max-width:34rem;margin:1rem 1rem 1rem .5rem;border-radius:1.1rem;display:flex;flex-direction:column;background:var(--panel);box-shadow:var(--shadow);overflow:hidden}
+.full .screen{left:0;top:0;right:0;bottom:0;border-radius:0;box-shadow:none}
+.full .panel{display:none}
+@media (orientation:portrait){
+ #app{flex-direction:column}
+ .stage{flex:none;width:100%;height:0;padding-bottom:56.25%;background:#000}
+ .screen{left:0;top:0;right:0;bottom:0;border-radius:0;box-shadow:none}
+ .panel{width:auto;min-width:0;max-width:none;flex:1;min-height:0;margin:0;border-radius:1.3rem 1.3rem 0 0;box-shadow:0 -.4rem 1.4rem rgba(0,0,0,.35)}
+ .full .stage{height:100%;padding-bottom:0;flex:1}
+}
+/* ukuran huruf: layar TV dibaca dari jauh, jadi dibuat lebih besar */
+@media (orientation:landscape) and (min-height:421px){html{font-size:16px}}
+@media (orientation:landscape) and (max-height:420px){html{font-size:13px}}
+@media (orientation:landscape) and (min-height:601px){html{font-size:20px}}
+@media (orientation:landscape) and (min-height:801px){html{font-size:24px}}
+@media (orientation:landscape) and (min-height:1000px){html{font-size:28px}}
+@media (hover:hover) and (pointer:fine){html{font-size:16px!important}}
+
+/* ---------- overlay pemutar ---------- */
+.top,.bot{position:absolute;left:0;right:0;display:flex;align-items:center;padding:.8rem 1rem;z-index:3;transition:opacity .3s}
+.top{top:0;justify-content:space-between;background:linear-gradient(rgba(0,0,0,.72),transparent);padding-bottom:1.6rem;display:none}
+.full .top{display:flex}
+.bot{bottom:0;background:linear-gradient(transparent,rgba(0,0,0,.72));padding-top:1.6rem}
+.chinfo{min-width:0;display:flex;align-items:center}
+.chinfo .num{background:var(--grad);color:#fff;font-weight:800;font-size:1rem;padding:.1rem .6rem;border-radius:.55rem;margin-right:.7rem;font-variant-numeric:tabular-nums}
+.chinfo .num:empty{display:none}
+.chinfo b{font-size:1.35rem;font-weight:800;text-shadow:0 1px 10px rgba(0,0,0,.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chinfo small{margin-left:.8rem;color:#cfd4f5;font-size:.85rem;white-space:nowrap}
+.top .wm{font-size:1.3rem;margin-left:1rem;opacity:.9}
+.sp{flex:1}
+.live{background:rgba(0,0,0,.55);border-radius:99px;padding:.45rem 1rem .45rem .85rem;font-weight:800;font-size:.85rem;display:flex;align-items:center;letter-spacing:.02em}
+.live::before{content:"";width:.55rem;height:.55rem;border-radius:50%;background:var(--live);margin-right:.5rem;box-shadow:0 0 .6rem var(--live)}
+.cb{width:2.8rem;height:2.8rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;border-radius:50%;background:rgba(0,0,0,.5);margin-left:.55rem;color:#fff}
+.full .screen:not(.ui) .top,.full .screen:not(.ui) .bot{opacity:0;visibility:hidden}
+.state{position:absolute;left:0;top:0;right:0;bottom:0;z-index:2;display:flex;align-items:center;justify-content:center;text-align:center;padding:1.2rem;background:radial-gradient(circle at 50% 32%,rgba(64,76,190,.5),rgba(6,8,20,.96) 70%);color:#fff}
+.state.hide{display:none}
+.state h3{font-size:1.35rem;font-weight:800;margin:.9rem 0 .35rem}
+.state p{color:#b9bee8;font-size:.9rem;line-height:1.55;max-width:24rem;margin:0 auto}
+.ico{width:4.2rem;height:4.2rem;border-radius:50%;margin:0 auto;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:2.1rem}
+.state.err .ico{background:rgba(255,77,109,.2);color:#ff8aa0}
+.state .btn{margin-top:1.1rem;display:inline-block;padding:.75rem 1.8rem;border-radius:99px;background:rgba(255,255,255,.16);font-weight:800;text-align:center;color:#fff}
+.spin{width:3rem;height:3rem;margin:0 auto;border-radius:50%;border:.28rem solid rgba(255,255,255,.12);border-top-color:#38a1ff;border-right-color:#8a6bff;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.hud{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);background:rgba(0,0,0,.78);border-radius:1rem;padding:.6rem 1.6rem;font-weight:800;font-size:1.8rem;z-index:4;pointer-events:none;display:none;font-variant-numeric:tabular-nums;color:#fff}
+.hud.on{display:block}
+
+/* ---------- panel daftar ---------- */
+.panel header{display:flex;align-items:center;padding:.95rem 1.1rem .45rem}
+.panel header .wm{font-size:1.65rem;flex:1;min-width:0;margin-right:.6rem}
+.pill{display:flex;align-items:center;background:var(--chip);border-radius:99px;padding:.45rem .55rem .45rem 1rem;font-weight:700;font-size:.9rem;max-width:12.5rem;flex:none}
+.pill span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill em{font-style:normal;color:var(--mut);font-weight:600;font-size:.8rem;margin-left:.5rem;flex:none}
+.pill svg{font-size:1.4rem;flex:none;margin-left:.1rem}
+.now{display:flex;align-items:center;margin:.35rem 1rem .5rem;padding:.7rem .9rem .7rem .7rem;border-radius:1.1rem;background:linear-gradient(115deg,rgba(56,161,255,.17),rgba(138,107,255,.17));border:1px solid var(--line)}
+.now .lg{width:3.3rem;height:3.3rem;margin-right:.8rem}
+.now .nm b{font-size:1.05rem}
+.nn{font-size:1.9rem;font-weight:800;line-height:1;margin-left:.6rem;font-variant-numeric:tabular-nums;color:var(--ac)}
+.srch{padding:.3rem 1rem .5rem;position:relative}
+.srch input{width:100%;border:2px solid transparent;background:var(--surf);color:var(--tx);border-radius:99px;padding:.7rem 1rem .7rem 2.8rem;font:inherit;font-size:.95rem}
+.srch input::placeholder{color:var(--mut)}
+.srch svg{position:absolute;left:1.95rem;top:50%;margin-top:-.65rem;color:var(--mut);font-size:1.3rem;pointer-events:none}
+.chs{flex:1;min-height:0;overflow-y:auto;position:relative;-webkit-overflow-scrolling:touch;padding:.15rem .55rem .6rem}
+.chs::-webkit-scrollbar{width:.45rem}.chs::-webkit-scrollbar-thumb{background:var(--line);border-radius:9px}
+.rw{display:flex;align-items:center;margin:.12rem 0;position:relative}
+.row{flex:1;min-width:0;display:flex;align-items:center;padding:.5rem .6rem .5rem .3rem;border-radius:1rem;position:relative;transition:transform .12s,background .12s,box-shadow .12s}
+.no{width:2.5rem;flex:none;color:var(--mut);font-weight:700;font-size:.8rem;text-align:right;padding-right:.65rem;font-variant-numeric:tabular-nums}
+.lg{width:3rem;height:3rem;border-radius:.85rem;flex:none;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(135deg,var(--tileA),var(--tileB));color:#fff;font-weight:800;font-size:1.15rem;margin-right:.8rem;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.lg img{width:100%;height:100%;object-fit:contain;padding:.3rem}
+.nm{flex:1;min-width:0}
+.nm b{display:block;font-size:1rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nm small{display:block;color:var(--mut);font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:.1rem}
+.row.on{background:var(--sel)}
+.row.on::before{content:"";position:absolute;left:0;top:.75rem;bottom:.75rem;width:.2rem;border-radius:9px;background:linear-gradient(var(--ac),var(--ac2))}
+.on .nm b{color:var(--ac)}
+.on .no{color:var(--ac)}
+.eq{display:none;align-items:flex-end;height:1rem;margin:0 .6rem;flex:none}
+.on .eq{display:flex}
+.eq i{width:.2rem;margin-left:.13rem;background:var(--ac);border-radius:2px;height:30%;animation:eq .9s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:.25s}.eq i:nth-child(3){animation-delay:.5s}
+@keyframes eq{0%,100%{height:25%}50%{height:100%}}
+@media (prefers-reduced-motion:reduce){.eq i{animation:none;height:70%}.spin{animation-duration:2s}}
+.fv{width:2.8rem;height:2.8rem;flex:none;font-size:1.35rem;color:var(--mut);display:flex;align-items:center;justify-content:center;border-radius:50%;margin-left:.15rem}
+.fv svg{opacity:.4}.fv.on svg{opacity:1;color:#f7b500}
+.empty{padding:2.2rem 1.2rem;text-align:center;color:var(--mut);font-size:.95rem;line-height:1.6}
+.more{display:block;width:100%;padding:.9rem;text-align:center;color:var(--mut);font-weight:700;border-radius:1rem;margin-top:.3rem;background:var(--surf)}
+.hint{display:none;padding:.6rem 1.1rem;font-size:.72rem;color:var(--mut);border-top:1px solid var(--line);line-height:1.4}
+body.tv .hint{display:block}
+
+/* ---------- dialog (pengganti <dialog>, lebih kompatibel) ---------- */
+.modal{position:fixed;left:0;top:0;right:0;bottom:0;z-index:50;background:rgba(3,5,14,.74);display:flex;align-items:center;justify-content:center;padding:1rem}
+.mbox{background:var(--panel);color:var(--tx);border:1px solid var(--line);border-radius:1.4rem;width:100%;max-width:28rem;max-height:90%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1.5rem 4rem rgba(0,0,0,.6)}
+.mbox h3{font-size:1.2rem;font-weight:800;padding:1.15rem 1.4rem .5rem}
+.mbody{overflow-y:auto;position:relative;padding:.3rem 0 .7rem}
+.qi{display:flex;justify-content:space-between;align-items:center;width:calc(100% - 1rem);margin:.08rem .5rem;padding:.8rem 1rem;border-radius:.9rem;font-weight:700;font-size:1rem}
+.qi span{flex:1;min-width:0}
+.qi small{color:var(--mut);margin-left:.8rem;font-weight:600}
+.qi.on{background:var(--sel);color:var(--ac)}
+.qi.on::after{content:"";width:.6rem;height:.6rem;border-radius:50%;background:var(--ac);margin-left:.8rem;flex:none}
+.tabs{display:flex;background:var(--surf);border-radius:99px;margin:1.1rem 1.2rem .4rem;padding:.25rem}
+.tabs button{flex:1;text-align:center;padding:.65rem;font-weight:800;color:var(--mut);border-radius:99px}
+.tabs button.on{background:var(--grad);color:#fff}
+.mfoot{padding:.8rem 1.2rem;border-top:1px solid var(--line);display:flex;justify-content:flex-end}
+.btn2{padding:.7rem 2rem;border-radius:99px;background:var(--grad);color:#fff;font-weight:800;text-align:center}
+.toast{position:fixed;left:50%;top:1.5rem;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:.75rem 1.4rem;border-radius:99px;font-weight:700;font-size:.9rem;z-index:60;max-width:90%;text-align:center;display:none;box-shadow:0 .6rem 1.6rem rgba(0,0,0,.4)}
+.toast.on{display:block}
+@media (orientation:portrait){
+ .modal{align-items:flex-end;padding:0}
+ .mbox{max-width:none;max-height:78%;border-radius:1.4rem 1.4rem 0 0;border-bottom:0}
+ .xbox{border-radius:1.4rem 1.4rem 0 0!important}
+}
+
+/* ---------- fokus remote (hanya tampil saat memakai tombol, bukan sentuhan) ---------- */
+input:focus{border-color:var(--ac)}
+body.tv .row:focus{background:var(--grad);color:#fff;box-shadow:0 .4rem 1.3rem rgba(70,100,255,.5),0 0 0 .13rem rgba(255,255,255,.92);transform:scale(1.02);z-index:2}
+body.tv .row:focus::before{display:none}
+body.tv .row:focus .nm small,body.tv .row:focus .no,body.tv .row:focus .nm b{color:#fff}
+body.tv .row:focus .eq i{background:#fff}
+body.tv .fv:focus,body.tv .cb:focus,body.tv .pill:focus,body.tv .qi:focus,body.tv .tabs button:focus,body.tv .btn2:focus,body.tv .live:focus,body.tv .state .btn:focus,body.tv .more:focus{background:var(--grad);color:#fff;box-shadow:0 .3rem 1.1rem rgba(70,100,255,.5),0 0 0 .13rem rgba(255,255,255,.92)}
+body.tv .fv:focus svg{opacity:1;color:#fff}
+body.tv .qi:focus small,body.tv .qi:focus{color:#fff}
+body.tv .screen:focus{box-shadow:0 0 0 .2rem var(--ac),var(--shadow)}
+body.tv .full .screen:focus{box-shadow:none}
+body.tv .srch input:focus{box-shadow:0 0 0 .18rem var(--ac);border-color:transparent;background:var(--surf2)}
+@media (hover:hover){.row:hover{background:var(--surf)}.row.on:hover{background:var(--sel)}.cb:hover{background:rgba(255,255,255,.22)}.pill:hover{background:var(--surf2)}.qi:hover{background:var(--surf)}}
+.xbox{max-width:25rem;padding:1.5rem 1.4rem 1.2rem}
+.xbox h3{padding:0;font-size:1.3rem}
+.xs{color:var(--mut);font-size:.9rem;margin:.2rem 0 1rem}
+.xi{display:flex;align-items:center;background:var(--surf);border-radius:1.1rem;padding:.85rem;margin-bottom:1rem}
+.xic{width:2.9rem;height:2.9rem;border-radius:50%;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex:none;margin-right:.85rem}
+.xi p{font-size:.85rem;line-height:1.5;color:var(--mut)}
+.xy,.xn{display:block;width:100%;text-align:center;padding:.85rem;border-radius:99px;font-weight:800;font-size:1rem;margin-top:.55rem}
+.xy{background:linear-gradient(115deg,#ff5d6c,#e8362f);color:#fff}.xn{background:var(--surf);color:var(--tx)}
+body.tv .xy:focus,body.tv .xn:focus{box-shadow:0 0 0 .2rem var(--ac),0 .4rem 1.2rem rgba(70,100,255,.4)}
+@keyframes pop{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:none}}
+.modal:not([hidden]) .mbox{animation:pop .18s ease-out}
+
+/* ---------- performa (Android TV): tanpa bayangan blur & tanpa animasi yang jalan terus ---------- */
+:root{--shadow:none;--glow:none}
+.panel,.screen,.mbox,.toast{box-shadow:none}
+.row{transition:none}
+.eq i{animation:none;height:70%}
+.rw{content-visibility:auto;contain-intrinsic-size:auto 4.3rem}
+body.tv .row:focus{box-shadow:0 0 0 .14rem rgba(255,255,255,.92);transform:none}
+body.tv .fv:focus,body.tv .cb:focus,body.tv .pill:focus,body.tv .qi:focus,body.tv .tabs button:focus,body.tv .btn2:focus,body.tv .live:focus,body.tv .state .btn:focus,body.tv .more:focus{box-shadow:0 0 0 .14rem rgba(255,255,255,.92)}
+body.tv .xy:focus,body.tv .xn:focus,body.tv .screen:focus{box-shadow:0 0 0 .2rem var(--ac)}
+body.tv .xp:focus{box-shadow:0 0 0 .2rem var(--tx)}
+body.tv .full .screen:focus{box-shadow:none}
+/* ---------- layar penuh di HP (sentuh): tombol ganti saluran + daftar saluran geser dari kanan ---------- */
+.chs,.mbody{touch-action:pan-y}
+.pho{display:none}
+.pn{position:absolute;top:4rem;left:1.2rem;width:9.5rem;height:6.8rem;border-radius:1.1rem;background:rgba(70,70,70,.6);overflow:hidden;z-index:3;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:.4rem;transition:opacity .3s}
+.pn .pnl{position:absolute;left:0;top:0;right:0;bottom:0;background-position:center;background-repeat:no-repeat;background-size:70%;opacity:.3}
+.pn b{position:relative;font-size:1.35rem;font-weight:800;letter-spacing:.01em}
+.pn small{position:relative;max-width:100%;font-size:.85rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:.15rem}
+.full .screen:not(.ui) .pn{opacity:0;visibility:hidden}
+body.tv .pn:focus{box-shadow:0 0 0 .14rem rgba(255,255,255,.92)}
+.ph .pho{display:flex}
+.full.ph .panel{display:flex;position:absolute;right:0;top:0;bottom:0;margin:0;width:22rem;min-width:0;max-width:70%;flex:none;border-radius:1.1rem 0 0 1.1rem;z-index:20;transform:translateX(105%);visibility:hidden}
+.full.ph.drawer .panel{transform:none;visibility:visible}
+.full.ph .hint{display:none!important}
+/* layar memuat: polos & ringan (tanpa gambar play bawaan WebView) */
+.state{background:#05071a}
+.state h3{font-size:1.25rem}
+/* popup galat */
+.ebox{text-align:center;padding:1.6rem 1.4rem 1.3rem}
+.eic{width:3.6rem;height:3.6rem;border-radius:50%;margin:0 auto .8rem;background:rgba(255,77,109,.16);color:#ff6b86;display:flex;align-items:center;justify-content:center;font-size:1.9rem}
+.ebox h3{padding:0}
+.ebox p{color:var(--mut);font-size:.92rem;line-height:1.55;margin:.4rem 0 .5rem}
+.ebox small{display:block;color:var(--mut);opacity:.75;font-size:.72rem;line-height:1.45;word-break:break-word;margin:0 0 .6rem}
+.xp{display:block;width:100%;text-align:center;padding:.85rem;border-radius:99px;font-weight:800;font-size:1rem;margin-top:.55rem;background:var(--grad);color:#fff}
+
+/* =====================================================================
+   TAMPILAN MODERN v3 — lapisan gaya di atas yang lama (struktur & JS tidak berubah).
+   Dasar (semua perangkat, termasuk Android TV): tanpa blur/bayangan/animasi berat.
+   Efek kaca, bayangan & animasi hanya di desktop (kursor) dan HP posisi tegak.
+   ===================================================================== */
+:root{--bg:#060813;--panel:#0d1024;--surf:#161a38;--surf2:#1f2550;--ac:#3ba7ff;--ac2:#9a6bff;--live:#ff3d6e;
+ --grad:linear-gradient(115deg,#22a6ff 0%,#6a63ff 55%,#a24bff 100%);--card:rgba(255,255,255,.045);--ring:rgba(255,255,255,.1)}
+:root[data-theme=light]{--bg:#e9edf8;--panel:#ffffff;--surf:#f0f3fb;--surf2:#e3e8f5;--card:rgba(18,22,43,.035);--ring:rgba(18,22,43,.1)}
+
+/* latar: dua cahaya lembut statis (murah untuk GPU) */
+#app{background-image:radial-gradient(ellipse at 8% 0%,rgba(59,167,255,.20),transparent 52%),radial-gradient(ellipse at 100% 100%,rgba(154,107,255,.18),transparent 50%)}
+:root[data-theme=light] #app{background-image:radial-gradient(ellipse at 8% 0%,rgba(59,167,255,.25),transparent 52%),radial-gradient(ellipse at 100% 100%,rgba(154,107,255,.2),transparent 50%)}
+
+/* kartu pemutar & panel */
+.screen{border-radius:1.4rem;box-shadow:0 0 0 1px var(--ring)}
+.panel{border-radius:1.4rem;border:1px solid var(--ring);background:var(--panel)}
+.full .screen{border-radius:0;box-shadow:none}
+
+/* kepala panel: merek besar + pil grup */
+.panel header{padding:1.1rem 1.2rem .55rem}
+.panel header .wm{font-size:1.2rem;letter-spacing:-.03em}
+.pill{max-width:9.5rem;font-size:.8rem}
+.top .wm{font-size:1rem}
+.pill{background:var(--card);border:1px solid var(--ring);padding:.5rem .6rem .5rem 1.05rem}
+
+/* kartu "sedang diputar" */
+.now{margin:.3rem 1rem .6rem;padding:.6rem .9rem .6rem .7rem;border-radius:1.1rem;background:var(--surf)}
+.now .lg{width:2.8rem;height:2.8rem;border-radius:.8rem}
+.now .nm b{font-size:.95rem}
+.nn{font-size:1.7rem;margin-top:.5rem;color:var(--ac)}
+
+/* pencarian */
+.srch input{background:var(--card);border:1px solid var(--ring);padding:.8rem 1rem .8rem 3rem}
+.srch input:focus{border-color:var(--ac)}
+
+/* daftar saluran: kartu bersih dengan logo besar */
+.chs{padding:.1rem .6rem .7rem}
+.rw{margin:.1rem 0}
+.row{padding:.4rem .6rem .4rem .2rem;border-radius:.9rem;border:0}
+.no{width:2.3rem;font-size:.7rem;opacity:.6}
+.lg{width:2.5rem;height:2.5rem;border-radius:.7rem}
+.nm b{font-size:.88rem;font-weight:600;letter-spacing:0}
+.nm small{font-size:.68rem;opacity:.7}
+.row.on{background:var(--surf)}
+.row.on::before{left:0;top:.8rem;bottom:.8rem;width:.2rem}
+.eq i{width:.2rem}
+.fv{width:2.6rem;height:2.6rem}
+.fv.on svg{color:#ffc61a}
+.more{background:var(--card);border:1px solid var(--ring);color:var(--tx)}
+.empty{padding:2.6rem 1.2rem}
+
+/* kontrol pemutar */
+.bot{padding:1.2rem 1.1rem .9rem;background:linear-gradient(transparent,rgba(0,0,0,.82))}
+.top{background:linear-gradient(rgba(0,0,0,.82),transparent)}
+.cb{width:3rem;height:3rem;margin-left:.6rem;background:rgba(18,20,40,.62);border:1px solid rgba(255,255,255,.16)}
+.live{background:rgba(255,61,110,.2);border:1px solid rgba(255,61,110,.5);color:#fff;padding:.5rem 1.1rem .5rem .9rem}
+.chinfo .num{border-radius:.6rem;padding:.12rem .65rem}
+.chinfo b{font-size:1.4rem}
+.hud{border-radius:1.2rem;border:1px solid rgba(255,255,255,.14);background:rgba(10,12,30,.82)}
+.pn{border-radius:1.2rem;border:1px solid rgba(255,255,255,.18);background:rgba(20,22,44,.7)}
+
+/* layar memuat / galat */
+.state{background:radial-gradient(circle at 50% 35%,rgba(70,90,230,.35),#05071a 62%)}
+.ico{width:4.6rem;height:4.6rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
+.state .btn{background:var(--grad);padding:.8rem 2rem}
+.spin{width:3.2rem;height:3.2rem}
+
+/* dialog */
+.modal{background:rgba(3,5,16,.78)}
+.mbox{border-radius:1.6rem;border:1px solid var(--ring)}
+.mbox h3{font-size:1.25rem;padding:1.3rem 1.5rem .6rem}
+.qi{border-radius:1rem;padding:.9rem 1.1rem}
+.qi.on{background:var(--surf)}
+.tabs{background:var(--card);border:1px solid var(--ring)}
+.btn2,.xp{padding:.8rem 2.2rem}
+.toast{background:var(--panel);color:var(--tx);border:1px solid var(--ring)}
+
+/* HP tegak: lembar bawah dengan pegangan */
+@media (orientation:portrait){
+ .panel{border-radius:1.7rem 1.7rem 0 0;border-bottom:0;margin-top:-.9rem;position:relative;z-index:2}
+ .panel::before{content:"";display:block;width:2.6rem;height:.28rem;border-radius:9px;background:var(--ring);margin:.55rem auto 0;flex:none}
+ .panel header{padding-top:.7rem}
+ .mbox::before{content:"";display:block;width:2.6rem;height:.28rem;border-radius:9px;background:var(--ring);margin:.6rem auto 0;flex:none}
+ .full .panel{margin-top:0}
+}
+
+/* ---------- efek mewah: bayangan, kaca, animasi ---------- */
+/* efek berat hanya untuk desktop & HP tegak; Android TV tetap ringan. Untuk mencoba di TV, ganti kondisi di bawah dengan: all *
+@media (hover:hover) and (pointer:fine),(orientation:portrait){
+ .screen{box-shadow:0 1.2rem 3rem rgba(0,0,0,.55),0 0 0 1px var(--ring)}
+ .full .screen{box-shadow:none}
+ .panel{box-shadow:0 1.2rem 3rem rgba(0,0,0,.4)}
+ :root[data-theme=light] .panel,:root[data-theme=light] .screen{box-shadow:0 1rem 2.4rem rgba(40,55,110,.16)}
+ .cb,.hud,.pn,.live{-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+ .row{transition:background .15s}
+ .eq i{animation:eq .9s ease-in-out infinite;height:30%}
+ .live::before{animation:lv 1.6s ease-out infinite}
+ @keyframes lv{0%{box-shadow:0 0 0 0 rgba(255,61,110,.6)}100%{box-shadow:0 0 0 .55rem rgba(255,61,110,0)}}
+ .spin{box-shadow:0 0 1.6rem rgba(106,99,255,.45)}
+ .mbox{box-shadow:0 1.6rem 4rem rgba(0,0,0,.6)}
+}
+@media (hover:hover) and (pointer:fine){
+ .row:hover{background:var(--surf)}
+ .cb:hover{background:rgba(255,255,255,.24)}
+ .pill:hover{background:var(--surf2)}
+}
+@media (prefers-reduced-motion:reduce){.eq i,.live::before{animation:none}}
+
+/* ukuran keseluruhan layar mendatar (TV) diperkecil ~25%: semua ukuran memakai rem, jadi ikut mengecil.
+   Ubah angka px di bawah untuk menyesuaikan (lebih kecil = tampilan lebih mungil). Desktop tidak berubah. */
+@media (orientation:landscape) and (max-height:420px){html{font-size:10px}}
+@media (orientation:landscape) and (min-height:421px){html{font-size:12px}}
+@media (orientation:landscape) and (min-height:601px){html{font-size:14px}}
+@media (orientation:landscape) and (min-height:801px){html{font-size:17px}}
+@media (orientation:landscape) and (min-height:1000px){html{font-size:20px}}
+
+/* fokus remote TV tetap jelas */
+body.tv .row:focus{background:var(--grad);border-color:transparent;transform:none}
+
+/* ---------- logo menggantikan teks nama, watermark pemutar, layar pembuka ---------- */
+.blogo{display:block;height:2.5rem;width:auto;max-width:100%;object-fit:contain}
+:root[data-theme=light] .panel header .blogo{background:#0b0d1c;padding:.3rem .75rem;border-radius:.7rem;box-sizing:content-box}
+.wmk{position:absolute;top:3.5%;right:2.5%;height:12%;min-height:2.6rem;max-height:6.5rem;width:auto;max-width:28%;object-fit:contain;opacity:.65;pointer-events:none;z-index:1;filter:drop-shadow(0 1px 4px rgba(0,0,0,.65))}
+.spl{position:fixed;left:0;top:0;right:0;bottom:0;z-index:200;background:radial-gradient(circle at 50% 38%,rgba(70,90,230,.32),#05071a 64%);display:flex;align-items:center;justify-content:center;text-align:center;transition:opacity .5s}
+.spl.out{opacity:0;pointer-events:none}
+.splc{width:100%;padding:0 1rem}
+.splc img{display:block;margin:0 auto;height:10rem;width:auto;max-width:70%;object-fit:contain;animation:splIn .8s cubic-bezier(.2,.8,.2,1) both}
+.splc .wm{font-size:3.2rem;color:#fff;animation:splIn .8s cubic-bezier(.2,.8,.2,1) both}
+.splb{width:9rem;height:.24rem;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden;margin:1.8rem auto 0}
+.splb i{display:block;height:100%;width:0;background:var(--grad);animation:splBar 2.8s linear forwards}
+@keyframes splIn{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:none}}
+@keyframes splBar{to{width:100%}}
+</style>
+</head>
+<body>
+<div id="app">
+  <section class="stage">
+    <div class="screen" id="scr" tabindex="0" data-f="1">
+      <video id="v" playsinline webkit-playsinline autoplay disablepictureinpicture poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"></video>
+      <img class="wmk" id="wmk" alt="" hidden>
+      <div class="top"><div class="chinfo"><span class="num" id="tNum"></span><b id="tName"></b><small id="tGrp"></small></div><span class="wm" id="wm2"></span></div>
+      <div class="bot"><button class="live" id="bLive" data-f="1">LIVE</button><span class="sp"></span><button class="cb pho" id="bLs" data-f="1" aria-label="Daftar saluran"></button><button class="cb" id="bM" data-f="1" aria-label="Suara"></button><button class="cb" id="bQ" data-f="1" aria-label="Kualitas"></button><button class="cb" id="bF" data-f="1" aria-label="Layar penuh"></button></div>
+      <button class="pn pho" id="cPv" data-f="1" aria-label="Saluran sebelumnya"><span class="pnl"></span><b>PREV</b><small></small></button><button class="pn pho" id="cNx" data-f="1" aria-label="Saluran berikutnya" style="left:auto;right:1.2rem"><span class="pnl"></span><b>NEXT</b><small></small></button>
+      <div class="hud" id="hud"></div>
+      <div class="state" id="st"></div>
+    </div>
+  </section>
+  <aside class="panel" id="panel">
+    <header><div class="wm" id="wm1"></div><button class="pill" id="gBtn" data-f="1"><span id="gName">Semua</span><em id="gCnt"></em></button></header>
+    <div class="now"><span class="lg" id="nLg"></span><span class="nm"><b id="nName"></b><small id="nGrp"></small></span><span class="nn" id="nNum"></span></div>
+    <div class="srch"><input id="q" data-f="1" type="search" placeholder="Cari saluran" autocomplete="off" readonly></div>
+    <div class="chs" id="chs"></div>
+    <div class="hint">OK: putar / pilih &nbsp;·&nbsp; ▲▼ pindah &nbsp;·&nbsp; ▶ ke layar, OK di layar = layar penuh &nbsp;·&nbsp; Kembali: mundur</div>
+  </aside>
+</div>
+
+<div class="spl" id="spl"><div class="splc"><img id="splImg" alt="" hidden><div class="wm" id="splTx"></div><div class="splb"><i></i></div></div></div>
+<div class="modal" id="mG" hidden><div class="mbox"><h3>Pilih grup</h3><div class="mbody" id="gList"></div></div></div>
+<div class="modal" id="mQ" hidden><div class="mbox"><div class="tabs"><button data-t="v" data-f="1">Video</button><button data-t="a" data-f="1">Audio</button></div><div class="mbody" id="qb"></div><div class="mfoot"><button class="btn2" id="qOk" data-f="1">Selesai</button></div></div></div>
+<div class="modal" id="mX" hidden><div class="mbox xbox">
+  <h3>Yakin ingin keluar?</h3><div class="xs">Sampai jumpa lagi…</div>
+  <div class="xi"><span class="xic" id="xic"></span><p>Siaran yang sedang diputar akan dihentikan. Masih banyak saluran lain yang menunggu.</p></div>
+  <button class="xy" id="xYes" data-f="1">Ya, Keluar</button>
+  <button class="xn on" id="xNo" data-f="1">Batal</button>
+</div></div>
+<div class="modal" id="mE" hidden><div class="mbox xbox ebox">
+  <div class="eic" id="eic"></div><h3 id="eT"></h3><p id="eM"></p><small id="eD"></small>
+  <div id="eB"></div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+var WV=/; wv\)|Version\/4\.0 Chrome/i.test(navigator.userAgent);
+var ls={g:function(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},s:function(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+/* ---------- penemuan alamat server ----------
+   Server berjalan di balik Cloudflare Quick Tunnel yang alamatnya berganti setiap dinyalakan. start_tunnel.py menulis
+   alamat terbaru ke server.json di GitHub; halaman ini membacanya dari sana. Urutan pencarian:
+   1) ?server=...  2) alamat manual ('Atur alamat server')  3) alamat halaman ini  -> dipakai bila menjawab /api/ping
+   4) server_url dari server.json di GitHub (disimpan di localStorage)  5) alamat tersimpan terakhir. */
+var GH_REPO='Tesjiwa/A-Stream';   /* repositori tempat server.json berada (pemilik/repo) - DIKUNCI */
+var GH_BRANCH='';               /* kosong = cabang bawaan repositori */
+var BASE=ls.g('dtv_srv','')||(/^https?:/i.test(location.origin)&&!/\.invalid$/i.test(location.hostname)?location.origin:'');
+function cleanUrl(v){v=String(v||'').trim().replace(/\/+$/,'');if(v&&!/^https?:\/\//i.test(v))v='http://'+v;return v}
+function timed(p,ms){return new Promise(function(res,rej){var t=setTimeout(function(){rej(Error('timeout'))},ms);p.then(function(x){clearTimeout(t);res(x)},function(e){clearTimeout(t);rej(e)})})}
+function ping(u){
+ if(!u)return Promise.resolve(false);
+ return timed(fetch(u+'/api/ping',{cache:'no-store'}),5000).then(function(r){return r.ok?r.json():null}).then(function(j){return !!(j&&j.ok)}).catch(function(){return false});
+}
+/* server_url terbaru dari GitHub: API (tanpa cache 5 menit) dulu, lalu raw.githubusercontent dengan parameter anti-cache */
+function ghServer(){
+ var br=GH_BRANCH?'?ref='+encodeURIComponent(GH_BRANCH):'';
+ function pick(t){var u=cleanUrl(JSON.parse(t).server_url);if(!/^https?:\/\/[^\/]+$/i.test(u))throw Error('server.json tidak valid');return u}
+ function get(u,o){return timed(fetch(u,o),7000).then(function(r){if(!r.ok)throw Error('HTTP '+r.status);return r.text()}).then(pick)}
+ return get('https://api.github.com/repos/'+GH_REPO+'/contents/server.json'+br,{headers:{'Accept':'application/vnd.github.raw'},cache:'no-store'})
+  .catch(function(){return get('https://raw.githubusercontent.com/'+GH_REPO+'/'+(GH_BRANCH||'HEAD')+'/server.json?t='+Date.now(),{cache:'no-store'})});
+}
+function findServer(first){
+ var chain=Promise.resolve(null);
+ function tryU(u){if(!u)return;chain=chain.then(function(f){return f||ping(u).then(function(ok){return ok?u:null})})}
+ if(first){
+  var q=/[?&]server=([^&]+)/.exec(location.search);if(q)tryU(cleanUrl(decodeURIComponent(q[1])));
+ }
+ tryU(ls.g('dtv_man',''));
+ if(first&&/^https?:/i.test(location.origin)&&!/\.invalid$/i.test(location.hostname))tryU(location.origin);
+ chain=chain.then(function(f){return f||ghServer().catch(function(){return null})});
+ chain=chain.then(function(f){return f||ls.g('dtv_srv','')||null});
+ return chain.then(function(f){if(f){BASE=f;ls.s('dtv_srv',f)}return f},function(){return null});
+}
+var READY=findServer(true);
+var REC=null,REC_AT=0;
+/* alamat server berubah (tunnel baru)? ambil ulang server.json sekali; true bila BASE sudah berganti */
+function recover(old){
+ if(BASE!==old)return Promise.resolve(true);
+ if(REC)return REC.then(function(){return BASE!==old});
+ if(Date.now()-REC_AT<8000)return Promise.resolve(false);
+ REC_AT=Date.now();
+ REC=findServer(false).then(function(){},function(){}).then(function(){REC=null});
+ return REC.then(function(){return BASE!==old});
+}
+function tunnelLost(old){if(BASE!==old)return Promise.resolve(true);return ping(BASE).then(function(ok){return ok?false:recover(old)})}
+/* fetch ke server; gagal sambung / error tunnel (530, 502-504 pada /api) -> cari alamat baru lalu ulangi sekali */
+function F(path,o){
+ return READY.then(function(){
+  function go(again){
+   var b0=BASE;
+   return fetch(b0+path,o).then(function(r){
+    if(!again&&(r.status===530||(path.indexOf('/api/')===0&&(r.status===502||r.status===503||r.status===504))))
+     return recover(b0).then(function(ch){return ch?go(true):r});
+    return r;
+   },function(e){
+    if(again)throw e;
+    return recover(b0).then(function(ch){if(!ch)throw e;return go(true)});
+   });
+  }
+  return go(false);
+ });
+}
+function askServer(){
+ var v=prompt('Alamat server DhanyTV (contoh: http://192.168.1.10:3000)\nKosongkan untuk memakai penemuan otomatis (tunnel dari GitHub).',ls.g('dtv_man','')||BASE||'');
+ if(v===null)return;v=cleanUrl(v);
+ ls.s('dtv_man',v);if(v)ls.s('dtv_srv',v);location.reload();
+}
+/* tema pemutar (diatur admin): dipakai dari ingatan perangkat dulu supaya tidak berkedip */
+document.documentElement.setAttribute('data-theme',ls.g('dtv_th','dark'));
+var LIBS={
+ hls:['https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js','https://unpkg.com/hls.js@1.5.17/dist/hls.min.js'],
+ shaka:['https://cdn.jsdelivr.net/npm/shaka-player@4.7.11/dist/shaka-player.compiled.js','https://unpkg.com/shaka-player@4.7.11/dist/shaka-player.compiled.js'],
+ mpegts:['https://cdn.jsdelivr.net/npm/mpegts.js@1.7.3/dist/mpegts.js','https://unpkg.com/mpegts.js@1.7.3/dist/mpegts.js']};
+var IC={
+ fs:'M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z',
+ fx:'M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z',
+ vol:'M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z',
+ mute:'M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.8 8.8 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a9 9 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z',
+ tune:'M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z',
+ star:'M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z',
+ dn:'M7 10l5 5 5-5z',
+ warn:'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
+ prev:'M6 6h2v12H6zm3.5 6 8.5 6V6z',
+ nxt:'M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z',
+ lst:'M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z',
+ tv:'M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z',
+ se:'M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'};
+function ic(k){return '<svg viewBox="0 0 24 24"><path d="'+IC[k]+'"/></svg>'}
+
+var v=$('v'),scr=$('scr'),app=$('app'),chs=$('chs'),q=$('q');
+var S={all:[],view:[],num:{},grp:'Semua',q:'',cur:null,favs:ls.g('dtv_f3',[]),hls:null,shaka:null,pm:'auto',lim:80,ver:'',
+ aid:0,att:[],ai:0,wd:0,wt:0,full:false,modal:null,opener:null,dg:'',unmute:false,qs:{v:-1,a:0},qt:'v',exitT:0,bad:null,touched:false,rot:false};
+var NATIVE=false;try{NATIVE=!!(window.DhanyTV&&typeof DhanyTV.rotate!=='undefined')}catch(e){}
+
+$('gBtn').insertAdjacentHTML('beforeend',ic('dn'));$('bQ').innerHTML=ic('tune');$('bM').innerHTML=ic('vol');$('bF').innerHTML=ic('fs');
+$('bLs').innerHTML=ic('lst');
+document.querySelector('.srch').insertAdjacentHTML('beforeend',ic('se'));$('xic').innerHTML=ic('tv');$('eic').innerHTML=ic('warn');
+/* nama aplikasi (diatur admin): '...tv' tampil dengan lencana gradien */
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+/* logo (diunggah admin) menggantikan teks nama di mana pun nama tampil; tanpa logo tetap memakai teks.
+   Gambar diambil lewat fetch lalu dijadikan blob: <img> langsung ke alamat LAN diblokir WebView APK (asal https virtual -> IP lokal),
+   sedangkan fetch lolos karena server membalas izin CORS + jaringan privat. Tepi transparan dipangkas supaya logo tidak tampak kecil. */
+var LOGO={v:0,url:'',fail:0,p:null};
+function trimBlob(b){return new Promise(function(res){
+ var u0=URL.createObjectURL(b),i=new Image();
+ i.onload=function(){try{
+  var w=i.naturalWidth,h=i.naturalHeight,c=document.createElement('canvas');c.width=w;c.height=h;
+  var x=c.getContext('2d');x.drawImage(i,0,0);var d=x.getImageData(0,0,w,h).data,x0=w,y0=h,x1=-1,y1=-1;
+  for(var yy=0;yy<h;yy++)for(var xx=0;xx<w;xx++)if(d[(yy*w+xx)*4+3]>12){if(xx<x0)x0=xx;if(xx>x1)x1=xx;if(yy<y0)y0=yy;if(yy>y1)y1=yy}
+  if(x1<0||(x0===0&&y0===0&&x1===w-1&&y1===h-1))return res(u0);
+  var cw=x1-x0+1,ch=y1-y0+1,c2=document.createElement('canvas');c2.width=cw;c2.height=ch;c2.getContext('2d').drawImage(c,x0,y0,cw,ch,0,0,cw,ch);
+  c2.toBlob(function(nb){res(nb?URL.createObjectURL(nb):u0)},'image/png')
+ }catch(e){res(u0)}};
+ i.onerror=function(){res(u0)};i.src=u0})}
+function logoLoad(v){
+ if(LOGO.v===v&&LOGO.url)return Promise.resolve(LOGO.url);
+ if(LOGO.p&&LOGO.pv===v)return LOGO.p;
+ LOGO.pv=v;
+ return LOGO.p=F('/logo?v='+v).then(function(r){if(!r.ok)throw Error('HTTP '+r.status);return r.blob()}).then(trimBlob).then(function(u){LOGO.v=v;LOGO.url=u;return u})
+  .catch(function(){LOGO.fail=v;LOGO.p=null;return ''});
+}
+function brand(n){
+ try{
+  S.nm=n||'DhanyTV';document.title=S.nm;
+  var m=/^(.{2,}?)(tv)$/i.exec(S.nm),a=m?esc(m[1])+'<i>'+esc(m[2])+'</i>':esc(S.nm),lg=S.lg||0;
+  var w1=$('wm1'),w2=$('wm2'),wk=$('wmk'),si=$('splImg'),st=$('splTx');
+  if(lg&&LOGO.fail!==lg){
+   if(LOGO.v===lg&&LOGO.url){
+    w1.innerHTML='<img class="blogo" alt="'+esc(S.nm)+'" src="'+LOGO.url+'">';w2.innerHTML='';
+    if(wk){wk.src=LOGO.url;wk.hidden=false}
+    if(si){si.src=LOGO.url;si.hidden=false}if(st)st.hidden=true;
+   }else{
+    w1.innerHTML='';w2.innerHTML='';if(wk)wk.hidden=true;if(si)si.hidden=true;if(st)st.hidden=true;
+    logoLoad(lg).then(function(){if(S.lg===lg)brand(S.nm)});
+   }
+  }else{
+   w1.innerHTML=a;w2.innerHTML=a;if(wk)wk.hidden=true;if(si)si.hidden=true;if(st){st.hidden=false;st.innerHTML=a}
+  }
+  if(!S.cur)$('tName').textContent=S.nm;
+  try{if(window.DhanyTV&&DhanyTV.setName)DhanyTV.setName(S.nm)}catch(e){}
+ }catch(e){}
+}
+S.lg=ls.g('dtv_lg',0);
+brand(ls.g('dtv_nm','DhanyTV'));
+/* layar pembuka: tampil minimal beberapa detik supaya enak dilihat. Di APK sudah ada layar pembuka bawaan, jadi dilewati */
+var SPL_MS=2800,splT0=Date.now(),splDone=false;
+function hideSpl(){var s=$('spl');if(!s||splDone)return;splDone=true;s.className='spl out';setTimeout(function(){if(s.parentNode)s.parentNode.removeChild(s)},600)}
+function splReady(){var w=(S.lg&&LOGO.p&&!LOGO.url)?Promise.race([LOGO.p,new Promise(function(r){setTimeout(r,3000)})]):Promise.resolve();
+ w.then(function(){setTimeout(hideSpl,Math.max(0,SPL_MS-(Date.now()-splT0)))})}
+if(NATIVE){var s0=$('spl');if(s0&&s0.parentNode)s0.parentNode.removeChild(s0);splDone=true}
+else setTimeout(hideSpl,9000);
+
+/* ---------- util ---------- */
+var toastT=0;
+function toast(t){var e=$('toast');e.textContent=t;e.className='toast on';clearTimeout(toastT);toastT=setTimeout(function(){e.className='toast'},3000)}
+var hudT=0;
+function hud(t){var h=$('hud');h.textContent=t;h.className='hud on';clearTimeout(hudT);hudT=setTimeout(function(){h.className='hud'},1500)}
+function state(kind,h,p,btn){
+ var s=$('st');s.className='state'+(kind==='err'?' err':'');
+ s.innerHTML='<div>'+(kind==='spin'?'<div class="spin"></div>':'<div class="ico">'+ic(kind==='err'?'warn':'tv')+'</div>')+'<h3></h3><p></p></div>';
+ s.querySelector('h3').textContent=h;s.querySelector('p').textContent=p||'';
+ if(btn){var b=document.createElement('button');b.className='btn';b.setAttribute('data-f','1');b.textContent=btn[0];b.onclick=btn[1];s.firstChild.appendChild(b)}
+}
+function lib(n){
+ var P=lib.p||(lib.p={});if(P[n])return P[n];
+ var srcs=LIBS[n].slice();
+ return P[n]=new Promise(function(ok,no){
+  function cdn(){var u=srcs.shift();if(!u){P[n]=null;return no(new Error('lib '+n))}
+   var s=document.createElement('script'),dn=0,tm=setTimeout(function(){if(dn)return;dn=1;try{s.parentNode.removeChild(s)}catch(e){}cdn()},9000);
+   s.src=u;s.onload=function(){if(dn)return;dn=1;clearTimeout(tm);ok()};s.onerror=function(){if(dn)return;dn=1;clearTimeout(tm);try{s.parentNode.removeChild(s)}catch(e){}cdn()};document.head.appendChild(s)}
+  /* pertama: salinan dari server sendiri (lewat fetch -> blob, sama seperti API; cepat dan tidak bergantung CDN), lalu CDN sebagai cadangan */
+  var st=0,t0=setTimeout(function(){if(st)return;st=1;cdn()},6000);
+  function fall(){if(st)return;st=1;clearTimeout(t0);cdn()}
+  fetch(BASE+'/lib/'+n+'.js').then(function(r){if(!r.ok)throw 0;return r.blob()}).then(function(b){
+   if(st)return;st=2;clearTimeout(t0);
+   var u=URL.createObjectURL(b),s=document.createElement('script');
+   s.onload=function(){ok()};s.onerror=function(){try{s.parentNode.removeChild(s)}catch(e){}st=1;cdn()};s.src=u;document.head.appendChild(s)
+  }).catch(fall);
+ });
+}
+
+/* ---------- data saluran (dari admin) ---------- */
+function load(first){
+ return F('/api/channels').then(function(r){if(!r.ok)throw Error('HTTP '+r.status);return r.json()}).then(function(d){
+  var lg=d.lg||0,rb=false;
+  if(lg!==S.lg){S.lg=lg;ls.s('dtv_lg',lg);rb=true}
+  if(d.nm){ls.s('dtv_nm',d.nm);if(d.nm!==S.nm)rb=true}
+  if(rb)brand(d.nm||S.nm);
+  S.pm=d.pm||'auto';S.af=d.af==null?6:d.af;if(d.th&&d.th!==ls.g('dtv_th','dark')){ls.s('dtv_th',d.th)}document.documentElement.setAttribute('data-theme',d.th||'dark');
+  if(d.v===S.ver&&!first)return;
+  S.ver=d.v;S.all=d.c;S.num={};d.c.forEach(function(c,i){S.num[c.i]=i+1;if(S.cur&&S.cur.i===c.i)S.cur=c});
+  var fk=document.activeElement&&document.activeElement.getAttribute('data-k'),ff=document.activeElement&&document.activeElement.className;
+  if(first)S.grp=pickGroup();else if(!grpOk(S.grp))S.grp=S.defGrp||'Semua';
+  filter(true);
+  if(first){
+   if(!S.all.length)return state('idle','Belum ada saluran','Admin belum memuat playlist atau belum ada saluran yang aktif.',['Coba lagi',function(){location.reload()}]);
+   var last=ls.g('dtv_l3','');var c=null;S.all.forEach(function(x){if(x.i===last)c=x});
+   play(c||firstIn(S.grp)||S.all[0]);
+  }else if(fk){var e=chs.querySelector('[data-k="'+cssq(fk)+'"]'+(/fv/.test(ff)?'.fv':'.row'));if(e&&document.body.className.indexOf('tv')>=0)e.focus()}
+ });
+}
+function grpCount(){var g={};S.all.forEach(function(x){g[x.g]=(g[x.g]||0)+1});return g}
+function pickGroup(){
+ var g=grpCount(),best='',n=0;
+ Object.keys(g).forEach(function(k){if(/indonesia/i.test(k)&&g[k]>n){best=k;n=g[k]}});
+ S.defGrp=best||'Semua';
+ var sv=ls.g('dtv_grp','');
+ return (sv==='Semua'||sv==='★ Favorit'||g[sv])?sv:S.defGrp;
+}
+function grpOk(k){return k==='Semua'||k==='★ Favorit'||!!grpCount()[k]}
+function firstIn(k){var r=null;S.all.forEach(function(x){if(!r&&(k==='Semua'||k==='★ Favorit'||x.g===k))r=x});return r}
+function cssq(s){return String(s).replace(/(["\\])/g,'\\$1')}
+function refresh(){load(false).catch(function(){})}
+
+/* ---------- daftar ---------- */
+function filter(keep){
+ var qq=S.q.toLowerCase();
+ S.view=S.all.filter(function(x){
+  return (S.grp==='Semua'||(S.grp==='★ Favorit'?S.favs.indexOf(x.i)>=0:x.g===S.grp))&&(!qq||x.n.toLowerCase().indexOf(qq)>=0)});
+ if(!keep)S.lim=80;
+ render();
+}
+function fb(x,el){var h=0,s=x.n;for(var k=0;k<s.length;k++)h=(h*31+s.charCodeAt(k))%360;el.textContent=s.charAt(0).toUpperCase();el.style.background='linear-gradient(135deg,hsl('+h+',55%,46%),hsl('+((h+45)%360)+',55%,30%))'}
+function logo(x,el){
+ el.textContent='';el.style.background='';
+ if(x.l){var i=new Image();i.decoding='async';i.loading='lazy';i.src=x.l;i.referrerPolicy='no-referrer';i.onerror=function(){if(i.parentNode)i.parentNode.removeChild(i);fb(x,el)};el.appendChild(i)}else fb(x,el);
+}
+function mkRow(x){
+ var d=document.createElement('div');d.className='rw';
+ d.innerHTML='<button class="row" data-f="1"><span class="no"></span><span class="lg"></span><span class="nm"><b></b><small></small></span><span class="eq"><i></i><i></i><i></i></span></button><button class="fv" data-f="1" aria-label="Favorit">'+ic('star')+'</button>';
+ var r=d.firstChild,fv=d.lastChild;
+ r.setAttribute('data-k',x.i);fv.setAttribute('data-k',x.i);
+ r.querySelector('.no').textContent=S.num[x.i];logo(x,r.querySelector('.lg'));
+ r.querySelector('b').textContent=x.n;r.querySelector('small').textContent=x.g+(x.s.length>1?' · '+x.s.length+' sumber':'');
+ if(S.cur&&S.cur.i===x.i)r.classList.add('on');
+ if(S.favs.indexOf(x.i)>=0)fv.classList.add('on');
+ r.onclick=function(){play(x)};
+ fv.onclick=function(){var k=S.favs.indexOf(x.i);k<0?S.favs.push(x.i):S.favs.splice(k,1);ls.s('dtv_f3',S.favs);fv.classList.toggle('on')};
+ return d;
+}
+function moreBtn(){
+ var rest=S.view.length-S.lim;if(rest<=0)return null;
+ var m=document.createElement('button');m.className='more';m.setAttribute('data-f','1');m.textContent='Tampilkan lebih banyak ('+rest+')';m.onclick=more;return m;
+}
+function render(){
+ var top=chs.scrollTop,l=S.view;$('gName').textContent=S.grp;$('gCnt').textContent=l.length;chs.innerHTML='';
+ if(!l.length){chs.innerHTML='<p class="empty">'+(S.all.length?'Tidak ada saluran di sini.':'Memuat saluran…')+'</p>';return}
+ var f=document.createDocumentFragment();
+ l.slice(0,S.lim).forEach(function(x){f.appendChild(mkRow(x))});
+ var m=moreBtn();if(m)f.appendChild(m);
+ chs.appendChild(f);chs.scrollTop=top;paintPn();
+}
+function more(){
+ var old=S.lim,m=chs.querySelector('.more');if(m)chs.removeChild(m);
+ S.lim+=120;
+ var f=document.createDocumentFragment();
+ S.view.slice(old,S.lim).forEach(function(x){f.appendChild(mkRow(x))});
+ var b=moreBtn();if(b)f.appendChild(b);chs.appendChild(f);
+ if(bodyTv()){var rs=chs.querySelectorAll('.row'),e=rs[old]||rs[rs.length-1];if(e)e.focus()}
+}
+function nbr(d){var l=S.view.length&&S.view.indexOf(S.cur)>=0?S.view:S.all;if(!l.length)return null;var i=S.cur?l.indexOf(S.cur):-1;return l[i<0?(d>0?0:l.length-1):(i+d+l.length)%l.length]}
+function paintPn(){[['cPv',-1],['cNx',1]].forEach(function(a){var c=nbr(a[1]),b=$(a[0]);if(!b)return;
+ b.querySelector('small').textContent=c?c.n:'';b.querySelector('.pnl').style.backgroundImage=c&&c.l?'url("'+c.l.replace(/"/g,'%22')+'")':''})}
+function mark(){var rs=chs.querySelectorAll('.row');for(var i=0;i<rs.length;i++){var on=!!S.cur&&rs[i].getAttribute('data-k')===S.cur.i;rs[i].classList.toggle('on',on)}}
+q.oninput=function(){S.q=q.value;filter()};
+$('gBtn').onclick=openGroups;
+
+function openGroups(){
+ var c={};S.all.forEach(function(x){c[x.g]=(c[x.g]||0)+1});
+ var items=[['Semua',S.all.length],['★ Favorit',S.all.filter(function(x){return S.favs.indexOf(x.i)>=0}).length]].concat(Object.keys(c).sort().map(function(k){return[k,c[k]]}));
+ var b=$('gList');b.innerHTML='';
+ items.forEach(function(it){var e=document.createElement('button');e.className='qi'+(it[0]===S.grp?' on':'');e.setAttribute('data-f','1');e.innerHTML='<span></span><small></small>';e.firstChild.textContent=it[0];e.lastChild.textContent=it[1];
+  e.onclick=function(){S.grp=it[0];ls.s('dtv_grp',it[0]);closeModal();filter();var f=chs.querySelector('.row');if(f&&bodyTv())f.focus()};b.appendChild(e)});
+ openModal($('mG'),b.querySelector('.on'));
+}
+
+/* ---------- pemutar ---------- */
+function needPx(s){return s.m!=='file'&&!!s.p&&(!!s.x||S.pm==='always'||(location.protocol==='https:'&&/^http:/i.test(s.u)))}
+function play(c){
+ clearTimeout(S.afT);S.afOn=true;S.cur=c;app.classList.remove('drawer');ls.s('dtv_l3',c.i);S.qs={v:-1,a:0};v.style.visibility='';
+ $('tNum').textContent=S.num[c.i]||'';$('tName').textContent=c.n;$('tGrp').textContent=c.g;
+ $('nName').textContent=c.n;$('nGrp').textContent=c.g+(c.s.length>1?' · '+c.s.length+' sumber':'');$('nNum').textContent=S.num[c.i]||'';logo(c,$('nLg'));
+ mark();paintPn();showUI();
+ S.att=[];c.s.forEach(function(s,i){var p0=needPx(s);S.att.push({i:i,px:p0});if(!p0&&s.m!=='file'&&s.p)S.att.push({i:i,px:true})});
+ // DASH di browser lebih stabil melalui proxy; tetap ada fallback langsung.
+ if(S.pm!=='always'){
+  var dashAtt=[];
+  for(var j=0;j<c.s.length;j++)if(c.s[j].m==='dash'&&c.s[j].p){dashAtt.push({i:j,px:true});if(!c.s[j].x)dashAtt.push({i:j,px:false})}
+  if(dashAtt.length){var nonDash=S.att.filter(function(a){return c.s[a.i].m!=='dash'});S.att=dashAtt.concat(nonDash)}
+ }
+ var pf=ls.g('dtv_ok',{})[c.i];
+ if(pf){for(var k=0;k<S.att.length;k++){var a0=S.att[k],s0=c.s[a0.i];if(s0.m!=='dash'&&s0.u===pf.u&&(a0.px?1:0)===pf.px){S.att.splice(k,1);S.att.unshift(a0);break}}}
+ S.ai=0;S.rcv=0;S.errs=[];next();
+}
+function teardown(){
+ var ps=[];
+ S.bad=null;      /* error lama dari pemutar sebelumnya tidak boleh membunuh percobaan baru */
+ if(S.hls){try{S.hls.destroy()}catch(e){}S.hls=null}
+ if(S.shaka){var sp=S.shaka;S.shaka=null;try{ps.push(sp.destroy().catch(function(){}))}catch(e){}}
+ if(S.ts){try{S.ts.destroy()}catch(e){}S.ts=null}
+ /* Shaka.destroy() asinkron: dulu tidak ditunggu, lalu ikut menghapus src video milik percobaan BARU -> 'media error 4' */
+ ps.push(new Promise(function(r){setTimeout(r,2000)}));
+ var w=ps.length>1?Promise.race([Promise.all(ps.slice(0,-1)),ps[ps.length-1]]):Promise.resolve();
+ return w.then(function(){if(v.getAttribute('src')){v.removeAttribute('src');v.load()}});
+}
+function next(){
+ clearTimeout(S.wd);clearTimeout(S.wt);
+ var id=++S.aid;
+ teardown().then(function(){
+  if(id!==S.aid)return;
+  var a=S.att[S.ai++];if(!a)return dead();
+  var s=S.cur.s[a.i],url=a.px?BASE+s.p:s.u;
+  S.curA={c:S.cur.i,u:s.u,px:a.px?1:0};
+  var tag=(a.px?'proxy':'langsung')+(S.cur.s.length>1?' #'+(a.i+1):'');
+  var base0=BASE;
+  var fail=function(why){if(id!==S.aid)return;S.errs.push(tag+': '+(typeof why==='string'?why:'gagal/timeout'));next()};
+  /* sumber via proxy gagal & tunnel ternyata sudah berganti alamat -> ambil server.json lagi, ulangi sumber yang sama (sekali per saluran) */
+  var bad=S.bad=function(why){if(id!==S.aid)return;if(!a.px||S.rcv)return fail(why);S.rcv=1;
+   tunnelLost(base0).then(function(ch){if(id!==S.aid)return;if(ch){S.ai--;S.errs.push(tag+': tunnel berganti, diulang');next()}else fail(why)},function(){fail(why)})};
+  state('spin',S.cur.n,S.ai>1?'Mencoba sumber lain…':'Menyambungkan siaran…');
+  /* batas waktu pemutaran (di luar waktu mengunduh pustaka pemutar) */
+  var lim=s.m==='file'?25:s.m==='dash'?(a.px?30:20):(a.px?15:8);
+  function arm(sec){clearTimeout(S.wd);S.wd=setTimeout(function(){bad('tidak ada data dalam '+sec+' dtk')},sec*1000)}
+  function withLib(n,fn){arm(45);lib(n).then(function(){if(id!==S.aid)return;arm(lim);fn()}).catch(function(){bad('library pemutar gagal dimuat')})}
+  if(s.m==='file'){arm(lim);v.src=url;tryPlay()}
+  else if(s.m==='dash')withLib('shaka',function(){playDash(s,url,bad,id)});
+  else if(s.m==='ts')withLib('mpegts',function(){playTs(url,bad,id)});
+  else withLib('hls',function(){playHls(url,bad)});
+ });
+}
+function popup(title,msg,detail,btns){
+ $('eT').textContent=title;$('eM').textContent=msg;$('eD').textContent=detail||'';$('eD').hidden=!detail;
+ var b=$('eB');b.innerHTML='';
+ btns.forEach(function(x){var e=document.createElement('button');e.className=x[2]||'xn';e.setAttribute('data-f','1');e.textContent=x[0];e.onclick=x[1];b.appendChild(e)});
+ if(S.modal&&S.modal!==$('mE'))closeModal();
+ openModal($('mE'),b.firstChild);
+}
+function dead(){
+ var c=S.cur;state('idle',c.n,'Siaran tidak tersedia');
+ try{fetch(BASE+'/api/fail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:c.i})}).catch(function(){})}catch(e){}   // server menguji ulang & menyembunyikan jika benar mati
+ popup('Saluran tidak bisa diputar',c.n+' sedang tidak tersedia. Coba lagi sebentar atau pilih saluran lain.','Detail: '+S.errs.slice(-4).join(' · '),[
+  ['Coba lagi',function(){closeModal();state('spin',c.n,'Menyegarkan data saluran…');load(false).catch(function(){}).then(function(){var f=null;S.all.forEach(function(x){if(x.i===c.i)f=x});play(f||c)})},'xp'],
+  ['Saluran berikutnya',function(){closeModal();zap(1)},'xn'],
+  ['Tutup',function(){closeModal()},'xn']]);
+}
+function tryPlay(){
+ var p=v.play();
+ if(p&&p.catch)p.catch(function(e){if(e&&e.name==='NotAllowedError'){v.muted=true;S.unmute=true;v.play().catch(function(){});toast('Tekan tombol apa saja untuk menyalakan suara')}});
+}
+function playHls(src,bad){
+ if(window.Hls&&Hls.isSupported()){
+  var h=S.hls=new Hls({enableWorker:true,lowLatencyMode:false,startFragPrefetch:true,abrEwmaDefaultEstimate:1500000,maxBufferLength:30,maxMaxBufferLength:60,backBufferLength:10,capLevelToPlayerSize:true,liveSyncDurationCount:3,abrBandWidthFactor:.8,abrBandWidthUpFactor:.6,startLevel:0,fragLoadingTimeOut:20000,fragLoadingMaxRetry:4,fragLoadingRetryDelay:500,manifestLoadingTimeOut:10000,manifestLoadingMaxRetry:1,manifestLoadingRetryDelay:500,levelLoadingTimeOut:10000,levelLoadingMaxRetry:2,levelLoadingRetryDelay:500});
+  var rec=0;S.mv=null;S.mvLock=false;S.mvCur=-1;S.mvSrc=src;
+  h.on(Hls.Events.MANIFEST_LOADED,function(_,d){if(S.mvLock||!d||!d.levels)return;S.mv=d.levels.map(function(l){return{u:(l.url instanceof Array?l.url[0]:l.url),w:l.width||0,h:l.height||0,b:l.bitrate||0,n:l.name||''}})});
+  h.loadSource(src);h.attachMedia(v);
+  h.on(Hls.Events.MANIFEST_PARSED,tryPlay);
+  h.on(Hls.Events.ERROR,function(_,d){if(!d.fatal)return;if(d.type===Hls.ErrorTypes.MEDIA_ERROR&&!rec++)h.recoverMediaError();else bad((d.details||d.type)+(d.response&&d.response.code?' HTTP '+d.response.code:''))});
+ }else if(v.canPlayType('application/vnd.apple.mpegurl')){v.src=src;tryPlay()}
+ else bad('browser tidak mendukung HLS');
+}
+function playTs(src,bad,id){
+ lib('mpegts').then(function(){
+  if(id!==S.aid)return;
+  if(!window.mpegts||!mpegts.getFeatureList().mseLivePlayback)return bad('browser tidak mendukung MPEG-TS');
+  var p=S.ts=mpegts.createPlayer({type:'mpegts',isLive:true,url:src},{enableWorker:true,liveBufferLatencyChasing:true,lazyLoadMaxDuration:30});
+  p.attachMediaElement(v);p.on(mpegts.Events.ERROR,function(t,d){if(S.ts===p)bad('mpegts '+t+' '+d)});p.load();tryPlay();
+ }).catch(function(){bad('library MPEG-TS gagal dimuat')});
+}
+var SHK={1001:'sumber menolak (HTTP error)',1002:'jaringan / diblokir CORS',1003:'timeout sumber',4000:'manifest MPD rusak',4001:'MPD tanpa info segmen',6001:'DRM tidak didukung perangkat ini',6002:'DRM gagal dibuat',6007:'server lisensi gagal',6008:'lisensi ditolak',6010:'terenkripsi tanpa kunci',7000:'pemuatan terputus'};
+function shWhy(e){var d=e&&(e.detail||e),c=d&&d.code,x='';
+ if(c===1001&&d.data){var st=d.data[1],rt=['manifest','segmen','lisensi','aplikasi','waktu','sertifikat'][d.data[4]];x=' → HTTP '+st+(rt?' pada '+rt:'');try{var hh=new URL(String(d.data[0]),location.href).pathname.split('/');if(hh.length>3)x+=' ('+decodeURIComponent(hh[3])+')'}catch(q){}}
+ if(c===3016&&d.data)x=' → media error '+d.data[0]+(d.data[2]?' '+d.data[2]:'');
+ return c?('shaka '+c+(SHK[c]?' '+SHK[c]:'')+x):((e&&e.message)||'gagal')}
+function b2h(s){s=String(s).replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';var b=atob(s),o='';for(var i=0;i<b.length;i++){var c=b.charCodeAt(i).toString(16);o+=c.length<2?'0'+c:c}return o}
+/* kunci ClearKey bisa berupa 'kid:key,kid:key', JSON {"keys":[...]}, atau alamat server lisensi */
+function clearCfg(k){
+ k=String(k).trim();
+ if(/^https?:/i.test(k))return{servers:{'org.w3.clearkey':k}};
+ var ks={};
+ if(k.charAt(0)==='{'){try{(JSON.parse(k).keys||[]).forEach(function(x){ks[b2h(x.kid)]=b2h(x.k)})}catch(e){}}
+ else k.split(',').forEach(function(p){var a=p.split(':');if(a[0]&&a[1])ks[a[0].trim()]=a[1].trim()});
+ return Object.keys(ks).length?{clearKeys:ks}:null;
+}
+/* lisensi Widevine/PlayReady gaya Kodi: URL|Header=Nilai&Header2=Nilai2|... */
+function licCfg(k){
+ var a=String(k).split('|'),hd={};
+ (a[1]||'').split('&').forEach(function(x){var i=x.indexOf('=');if(i>0)hd[x.slice(0,i).trim()]=x.slice(i+1).trim()});
+ return{url:a[0].trim(),headers:hd};
+}
+/* cek apa yang sebenarnya didukung perangkat ini (EME butuh halaman https atau localhost) */
+function drmProbe(){
+ var o={sec:window.isSecureContext!==false,eme:!!navigator.requestMediaKeySystemAccess};
+ if(!o.eme)return Promise.resolve(o);
+ var cfg=[{initDataTypes:['cenc'],videoCapabilities:[{contentType:'video/mp4; codecs="avc1.42E01E"'}],audioCapabilities:[{contentType:'audio/mp4; codecs="mp4a.40.2"'}]}];
+ var ks=[['clearkey','org.w3.clearkey'],['widevine','com.widevine.alpha'],['playready','com.microsoft.playready']];
+ return Promise.all(ks.map(function(k){
+  var r;try{r=navigator.requestMediaKeySystemAccess(k[1],cfg)}catch(e){o[k[0]]=false;return Promise.resolve()}
+  return r.then(function(){o[k[0]]=true},function(){o[k[0]]=false});
+ })).then(function(){return o});
+}
+function drmText(o){
+ if(!o.sec)return'halaman ini tidak aman (bukan https/localhost). Buka lewat http://localhost:3000 atau https agar DRM bisa jalan';
+ if(!o.eme)return'browser/WebView ini tanpa dukungan DRM (EME)';
+ return'dukungan DRM perangkat: ClearKey '+(o.clearkey?'ya':'tidak')+', Widevine '+(o.widevine?'ya':'tidak')+', PlayReady '+(o.playready?'ya':'tidak');
+}
+function drmWhy(e,bad){
+ var b=shWhy(e);
+ drmProbe().then(function(o){bad(b+' ['+drmText(o)+']')},function(){bad(b)});
+}
+function playDash(s,src,bad,id){
+ lib('shaka').then(function(){
+  if(id!==S.aid)return;
+  try{shaka.polyfill.installAll()}catch(e){}
+  if(!shaka.Player.isBrowserSupported())return bad('browser tidak mendukung DASH');
+  var p=S.shaka=new shaka.Player(),d=s.d,rp={maxAttempts:5,baseDelay:500,backoffFactor:1.6,timeout:30000,stallTimeout:15000,connectionTimeout:20000},
+   c={streaming:{bufferingGoal:40,rebufferingGoal:2,bufferBehind:10,retryParameters:rp},
+   /* DASH: jangan langsung memilih resolusi tertinggi. Batasi sesuai ukuran pemutar & layar (HP/WebView berat mendekode 1080p + ClearKey), mulai dari perkiraan kecepatan rendah (1 Mbps), naik kualitas hanya jika kecepatan sekitar 2x lipat kebutuhan, dan jarang pindah kualitas */
+   abr:{enabled:true,restrictToElementSize:true,restrictToScreenSize:true,useNetworkInformation:false,defaultBandwidthEstimate:1000000,switchInterval:30,bandwidthUpgradeTarget:0.5,bandwidthDowngradeTarget:0.95},
+   manifest:{retryParameters:{maxAttempts:3,baseDelay:500,timeout:15000}}};
+  var lh={},ksys='';
+  if(d&&d.k){
+   var dt=String(d.t||'');if(!dt)dt=/^https?:/i.test(d.k)?'widevine':'clearkey';
+   if(/clearkey/i.test(dt)){var cc=clearCfg(d.k);if(cc){c.drm=cc;ksys='org.w3.clearkey'}}
+   else{
+    var lc=licCfg(d.k);lh=lc.headers;
+    ksys=/playready/i.test(dt)?'com.microsoft.playready':'com.widevine.alpha';
+    var sv={};sv[ksys]=lc.url;c.drm={servers:sv,retryParameters:{maxAttempts:3,baseDelay:500,timeout:15000}};
+   }
+  }
+  p.configure(c);
+  try{p.getNetworkingEngine().registerRequestFilter(function(t,r){
+   if(t===shaka.net.NetworkingEngine.RequestType.LICENSE){for(var k in lh)r.headers[k]=lh[k];return}
+   if(!src||!/^https?:\/\//i.test(src))return;
+   var m=src.match(/^(https?:\/\/[^/]+)\/([^/]+)\/https?:\/\/[^/]+/);if(!m)return;
+   var px=m[1]+'/'+m[2];
+   r.uris=r.uris.map(function(u){try{var z=new URL(u,src);if(z.protocol!=='http:'&&z.protocol!=='https:')return u;if(z.href.indexOf(px+'/')===0)return u;
+    return px+'/'+z.protocol.slice(0,-1)+'/'+z.host+z.pathname+z.search}catch(e){return u}});
+  })}catch(x){}
+  if(Object.keys(lh).length){try{p.getNetworkingEngine().registerRequestFilter(function(t,r){if(t===shaka.net.NetworkingEngine.RequestType.LICENSE)for(var k in lh)r.headers[k]=lh[k]})}catch(x){}}
+  var tr=0,RB=['','SW_SECURE_CRYPTO','SW_SECURE_DECODE'];
+  function fail(e,retry){
+   if(S.shaka!==p)return;
+   var c0=((e&&(e.detail||e))||{}).code;
+   if(retry&&c0===6001&&ksys&&ksys!=='org.w3.clearkey'&&tr<RB.length){      /* coba tingkat robustness yang lebih longgar */
+    var adv={};adv[ksys]={videoRobustness:RB[tr],audioRobustness:RB[tr]};tr++;
+    try{p.configure({drm:{advanced:adv}})}catch(x){}
+    return p.load(src).then(tryPlay).catch(function(e2){fail(e2,true)});
+   }
+   if(c0===6001||c0===6002||c0===6010)return drmWhy(e,bad);
+   bad(shWhy(e));
+  }
+  var rec=0;
+  p.addEventListener('error',function(e){
+   if(S.shaka!==p||!e.detail||e.detail.severity!==2)return;
+   if(v.currentTime>0&&rec++<3){                 /* sudah pernah tayang lalu putus: sambung ulang dulu, jangan langsung menyerah */
+    try{if(p.retryStreaming&&p.retryStreaming())return}catch(x){}
+    setTimeout(function(){if(S.shaka===p&&S.cur)play(S.cur)},800);return;
+   }
+   fail(e,false);
+  });
+  p.attach(v).then(function(){return p.load(src)}).then(tryPlay).catch(function(e){fail(e,true)});
+ }).catch(function(e){bad(shWhy(e))});
+}
+function rememberOk(){var a=S.curA;if(!a||a.done)return;a.done=true;try{fetch(BASE+'/api/using',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:a.c,u:a.u,px:a.px})}).catch(function(){})}catch(e){}   /* lapor ke server: sumber ini yang tayang (tampil di panel admin) */
+ var m=ls.g('dtv_ok',{}),ks=Object.keys(m);if(ks.length>300&&!m[a.c])delete m[ks[0]];m[a.c]={u:a.u,px:a.px};ls.s('dtv_ok',m)}
+v.onplaying=function(){clearTimeout(S.wd);clearTimeout(S.wt);$('st').className='state hide';if(S.modal===$('mE'))closeModal();rememberOk();armFull()};
+v.onwaiting=function(){clearTimeout(S.wt);S.wt=setTimeout(function(){if(S.cur&&!v.paused)play(S.cur)},30000)};  // macet lama: sambung ulang
+v.onerror=function(){if(S.shaka||S.hls||S.ts||!S.bad)return;S.bad(v.error?'media error '+v.error.code+(v.error.message?' '+v.error.message:''):'media error')};
+v.onvolumechange=function(){$('bM').innerHTML=ic(v.muted||v.volume===0?'mute':'vol')};v.onvolumechange();
+$('bM').onclick=function(){v.muted=!v.muted};
+$('bLive').onclick=function(){if(S.hls&&S.hls.liveSyncPosition)v.currentTime=S.hls.liveSyncPosition;else if(v.seekable&&v.seekable.length)v.currentTime=v.seekable.end(v.seekable.length-1);v.play().catch(function(){})};
+
+function zap(d){
+ var l=S.view.length&&S.view.indexOf(S.cur)>=0?S.view:S.all;if(!l.length)return;
+ var i=S.cur?l.indexOf(S.cur):-1,n=i<0?(d>0?0:l.length-1):(i+d+l.length)%l.length;
+ play(l[n]);showUI();
+}
+var uiT=0;
+function showUI(){scr.classList.add('ui');clearTimeout(uiT);uiT=setTimeout(function(){scr.classList.remove('ui')},4000)}
+scr.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('button'))return;if(app.classList.contains('drawer')){app.classList.remove('drawer');return}if(S.full){if(scr.classList.contains('ui')){scr.classList.remove('ui');clearTimeout(uiT)}else showUI()}});
+
+/* ---------- layar penuh = sembunyikan daftar ---------- */
+/* HP (sentuh): layar penuh = putar mendatar. APK baru memutar lewat Android (DhanyTV.rotate);
+   APK lama / browser: coba kunci orientasi, jika tidak bisa tampilan diputar 90° lewat CSS. Android TV tidak tersentuh. */
+function phone(){return S.touched&&!bodyTv()}
+function lockLand(on){
+ try{if(NATIVE){DhanyTV.rotate(on);return true}}catch(e){}
+ try{var o=screen.orientation;if(o&&o.lock){
+  if(on){o.lock('landscape').catch(function(){setTimeout(function(){try{o.lock('landscape').catch(function(){})}catch(e){}},500)})}
+  else if(o.unlock)o.unlock();
+ }}catch(e){}
+ return false;
+}
+function setFull(b){
+ S.full=b;app.classList.toggle('full',b);$('bF').innerHTML=ic(b?'fx':'fs');showUI();
+ if(b)clearTimeout(S.afT);
+ else{S.afOn=true;bumpFull()}                         // keluar dari layar penuh: layar penuh otomatis aktif lagi setelah diam beberapa detik
+ var ph=b&&phone();app.classList.toggle('ph',ph);if(!b)app.classList.remove('drawer');
+ if(phone()){
+  var okRot=lockLand(ph);
+  if(ph&&!okRot&&WV&&!S.hinted&&innerHeight>innerWidth){S.hinted=true;toast('Putar HP mendatar. Perbarui APK dari panel admin agar memutar otomatis.')}
+ }
+ if(!WV&&!bodyTv()){try{if(b&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen();else if(!b&&document.fullscreenElement)document.exitFullscreen()}catch(e){}}
+ if(b)scr.focus();else{var r=chs.querySelector('.row.on')||chs.querySelector('.row');(bodyTv()&&r?r:scr).focus()}
+}
+$('bF').onclick=function(){setFull(!S.full)};
+/* layar penuh otomatis: setelah saluran tertonton beberapa detik (diatur admin; 0 = mati) */
+function bumpFull(){                    // aktivitas pengguna (D-pad/sentuh/geser): hitung mundur layar penuh diulang dari awal
+ if(S.full||!S.afOn||!S.af||v.paused||v.readyState<2)return;
+ armFull();
+}
+function armFull(){
+ clearTimeout(S.afT);
+ if(!S.afOn||!S.af||S.full)return;
+ S.afT=setTimeout(function(){
+  if(!S.afOn||S.full)return;
+  if(innerHeight>innerWidth){S.afOn=false;return}                      // HP posisi tegak: tidak otomatis
+  if(S.modal||(document.activeElement===q&&!q.readOnly)){armFull();return}   // sedang memilih/mengetik: tunda
+  S.afOn=false;setFull(true);
+ },S.af*1000);
+}
+
+/* ---------- kualitas ---------- */
+function paintQ(){
+ var b=$('qb'),h=S.hls,sp=S.shaka,it=[];b.innerHTML='';
+ var tb=$('mQ').querySelectorAll('.tabs button');for(var i=0;i<tb.length;i++)tb[i].classList.toggle('on',tb[i].getAttribute('data-t')===S.qt);
+ if(S.qt==='v'){
+  it=[['none','Tidak ada'],[-1,'Otomatis']];
+  if(sp){var seen={};sp.getVariantTracks().sort(function(a,b){return a.height-b.height}).forEach(function(t){var k=t.height+'x'+t.bandwidth;if(seen[k])return;seen[k]=1;it.push([t.id,(t.width&&t.height?t.width+' × '+t.height+', ':'')+(t.bandwidth/1e6).toFixed(2)+' Mbps'])})}
+  else if(h){
+   var raw=S.mv||[];
+   if(raw.length>1&&raw.length>h.levels.length){
+    raw.map(function(l,i){return[i,l]}).sort(function(a,b){return(a[1].h-b[1].h)||(a[1].b-b[1].b)}).forEach(function(x){var l=x[1];it.push(['m'+x[0],qLabel(l.w,l.h,l.b,l.n,x[0])])});
+   }else{
+    h.levels.map(function(l,i){return[i,l]}).sort(function(a,b){return((a[1].height||0)-(b[1].height||0))||((a[1].bitrate||0)-(b[1].bitrate||0))}).forEach(function(x){var l=x[1];if(h.levels.length===1&&!l.height&&!l.bitrate)return;it.push([x[0],qLabel(l.width,l.height,l.bitrate,l.name,x[0])])});
+   }
+  }
+ }else if(h&&h.audioTracks.length)it=h.audioTracks.map(function(a,i){return[i,a.name||a.lang||'Trek '+(i+1)]});
+ if(!it.length){b.innerHTML='<p class="empty">Tidak ada trek audio alternatif untuk saluran ini.</p>';return}
+ var one=S.qt==='v'&&h&&h.levels.length<2&&!((S.mv||[]).length>1);
+ it.forEach(function(x){var e=document.createElement('button');e.className='qi'+(S.qs[S.qt]===x[0]?' on':'');e.setAttribute('data-f','1');e.innerHTML='<span></span>';e.firstChild.textContent=x[1];
+  e.onclick=function(){S.qs[S.qt]=x[0];applyQ();paintQ();var n=b.querySelector('.on');if(n)n.focus()};b.appendChild(e)});
+ if(one){var pn=document.createElement('p');pn.className='empty';pn.textContent='Sumber ini hanya menyediakan satu kualitas.';b.appendChild(pn)}
+}
+function qLabel(w,hh,b,n,i){
+ var p=[];if(w&&hh)p.push(w+' × '+hh);else if(hh)p.push(hh+'p');
+ if(b>0)p.push((b/1e6).toFixed(2)+' Mbps');
+ if(n&&!(w&&hh))p.unshift(n);
+ return p.length?p.join(', '):'Kualitas '+(i+1);
+}
+function applyQ(){
+ var sp=S.shaka,h=S.hls,id=S.qs.v;
+ if(sp){if(id==='none')v.style.visibility='hidden';else{v.style.visibility='';if(id===-1)sp.configure({abr:{enabled:true}});else{var t=sp.getVariantTracks().filter(function(t){return t.id===id})[0];if(t){sp.configure({abr:{enabled:false}});sp.selectVariantTrack(t,true)}}}}
+ if(h){
+  if(id==='none'){v.style.visibility='hidden';if(S.mvCur<0)h.currentLevel=0}
+  else if(typeof id==='string'&&id.charAt(0)==='m'){v.style.visibility='';var k=+id.slice(1),m=S.mv&&S.mv[k];if(m&&m.u&&S.mvCur!==k){S.mvCur=k;S.mvLock=true;h.loadSource(m.u)}}
+  else{v.style.visibility='';if(S.mvCur>=0){S.mvCur=-1;S.mvLock=false;h.loadSource(S.mvSrc)}else h.currentLevel=id}
+  if(h.audioTracks.length)h.audioTrack=S.qs.a}
+}
+function openQ(){if(!S.cur)return;S.qt='v';paintQ();openModal($('mQ'),$('qb').querySelector('.on')||$('qb').querySelector('.qi')||$('qOk'))}
+$('bQ').onclick=openQ;$('qOk').onclick=closeModal;
+(function(){var t=$('mQ').querySelectorAll('.tabs button');for(var i=0;i<t.length;i++)t[i].onclick=function(){S.qt=this.getAttribute('data-t');paintQ()}})();
+
+/* ---------- dialog ---------- */
+function openModal(m,focusEl){S.opener=document.activeElement;S.modal=m;m.hidden=false;var f=focusEl||m.querySelector('[data-f]');if(f)f.focus()}
+function closeModal(){if(!S.modal)return;S.modal.hidden=true;S.modal=null;var o=S.opener;S.opener=null;if(o&&o.focus&&document.body.contains(o)&&!o.hidden)o.focus();else scr.focus()}
+function showExit(){var m=$('mX');if(S.modal===m)return;if(S.modal)closeModal();openModal(m,$('xNo'))}
+$('xNo').onclick=function(){closeModal()};
+$('xYes').onclick=function(){
+ try{if(window.DhanyTV&&DhanyTV.exit){DhanyTV.exit();return}}catch(e){}
+ S.leaving=true;try{history.go(-2)}catch(e){}try{window.close()}catch(e){}
+};
+['mG','mQ','mX','mE'].forEach(function(id){$(id).addEventListener('click',function(e){if(e.target===this)closeModal()})});
+
+/* ---------- navigasi remote (D-pad) ---------- */
+function bodyTv(){return document.body.className.indexOf('tv')>=0}
+function visible(el){return el.offsetWidth>0&&el.offsetHeight>0&&getComputedStyle(el).visibility!=='hidden'}
+function focusables(root){var a=root.querySelectorAll('[data-f]'),o=[];for(var i=0;i<a.length;i++)if(visible(a[i])&&!a[i].disabled)o.push(a[i]);return o}
+function defFocus(){
+ if(S.modal)return S.modal.querySelector('.on[data-f]')||S.modal.querySelector('[data-f]');
+ if(S.full)return scr;
+ return chs.querySelector('.row.on')||chs.querySelector('.row')||scr;
+}
+function nav(dir){
+ var root=S.modal||document,cur=document.activeElement;
+ if(!S.modal&&cur&&cur.parentNode&&cur.parentNode.className==='rw'&&chs.contains(cur)){   // jalur cepat di daftar saluran
+  var rw=cur.parentNode,onFv=cur.classList.contains('fv'),sib,t;
+  if(dir==='down'||dir==='up'){
+   sib=dir==='down'?rw.nextElementSibling:rw.previousElementSibling;
+   if(sib&&sib.classList.contains('more')){more();return}
+   if(sib&&(t=sib.querySelector(onFv?'.fv':'.row'))){t.focus();return}
+  }else if(dir==='right'&&!onFv&&(t=rw.querySelector('.fv'))){t.focus();return}
+  else if(dir==='left'&&onFv&&(t=rw.querySelector('.row'))){t.focus();return}
+ }
+ var list=focusables(root);
+ if(!cur||list.indexOf(cur)<0){var f=defFocus();if(f)f.focus();return}
+ var r=cur.getBoundingClientRect(),cx=(r.left+r.right)/2,cy=(r.top+r.bottom)/2,best=null,bs=1e12;
+ for(var i=0;i<list.length;i++){var el=list[i];if(el===cur)continue;
+  var e=el.getBoundingClientRect(),ex=(e.left+e.right)/2,ey=(e.top+e.bottom)/2,p,s;
+  if(dir==='right'){if(ex<=cx+1)continue;p=e.left-r.right;s=Math.abs(ey-cy)}
+  else if(dir==='left'){if(ex>=cx-1)continue;p=r.left-e.right;s=Math.abs(ey-cy)}
+  else if(dir==='down'){if(ey<=cy+1)continue;p=e.top-r.bottom;s=Math.abs(ex-cx)}
+  else{if(ey>=cy-1)continue;p=r.top-e.bottom;s=Math.abs(ex-cx)}
+  var sc=Math.max(0,p)+s*2;if(sc<bs){bs=sc;best=el}}
+ if(best&&best.classList.contains('more')){more();return}     // sampai ujung daftar: muat lagi dan lanjut
+ if(best)best.focus();
+}
+function keepVisible(el){
+ var c=el.parentNode;while(c&&c!==document.body&&!/chs|mbody/.test(c.className))c=c.parentNode;
+ if(!c||c===document.body)return;
+ var cr=c.getBoundingClientRect(),er=el.getBoundingClientRect(),pad=el.offsetHeight;
+ if(er.top<cr.top+pad)c.scrollTop-=cr.top+pad-er.top;else if(er.bottom>cr.bottom-pad)c.scrollTop+=er.bottom-(cr.bottom-pad);
+}
+document.addEventListener('focusin',function(e){var t=e.target;if(t&&t.classList&&(t.classList.contains('row')||t.classList.contains('fv')||t.classList.contains('qi')))keepVisible(t)});
+q.addEventListener('blur',function(){q.readOnly=true});
+function editSearch(){q.readOnly=false;q.focus();try{var n=q.value.length;q.setSelectionRange(n,n)}catch(e){}}
+q.onclick=function(){if(q.readOnly)editSearch()};
+
+function back(){
+ if(S.modal){closeModal();return true}
+ if(app.classList.contains('drawer')){app.classList.remove('drawer');return true}
+ if(document.activeElement===q&&!q.readOnly){q.blur();return true}
+ if(S.full){setFull(false);return true}
+ if(S.q){q.value='';S.q='';filter();return true}
+ var dg=S.defGrp||'Semua';if(S.grp!==dg){S.grp=dg;filter();return true}
+ return false;
+}
+function digit(d){
+ S.dg=(S.dg+d).slice(-4);hud('Saluran '+S.dg);clearTimeout(digit.t);digit.t=setTimeout(commitDigits,1500);
+}
+function commitDigits(){clearTimeout(digit.t);var n=parseInt(S.dg,10);S.dg='';if(!n)return;var c=S.all[n-1];if(c)play(c);else toast('Saluran '+n+' tidak ada')}
+
+var DIR={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'},DIRK={19:'up',20:'down',21:'left',22:'right'};
+document.addEventListener('keydown',function(e){
+ var key=e.key,k=e.keyCode,noKey=!key||key==='Unidentified';
+ var dir=DIR[key]||(noKey?DIRK[k]:null);
+ /* kode angka (23, 66, 87, …) hanya dipercaya jika browser tidak memberi nama tombol:
+    keyCode 66 = Enter di Android tapi huruf "B" di keyboard biasa */
+ var enter=key==='Enter'||(noKey&&(k===13||k===23||k===66));
+ var isBack=key==='Escape'||key==='GoBack'||key==='BrowserBack'||(noKey&&(k===4||k===27));
+ var chUp=key==='ChannelUp'||key==='PageUp'||key==='MediaTrackNext'||(noKey&&(k===166||k===33||k===87));
+ var chDn=key==='ChannelDown'||key==='PageDown'||key==='MediaTrackPrevious'||(noKey&&(k===167||k===34||k===88));
+ var isNum=/^[0-9]$/.test(key||'');
+ if(!(dir||enter||isBack||chUp||chDn||isNum))return;
+ if(document.body.className.indexOf('tv')<0)document.body.className+=' tv';
+ bumpFull();
+ if(S.unmute){S.unmute=false;v.muted=false}
+ var a=document.activeElement,typing=a===q&&!q.readOnly;
+
+ if(isBack){e.preventDefault();back();return}
+ if(typing){
+  if(enter){e.preventDefault();q.blur();var f=chs.querySelector('.row');if(f)f.focus();return}
+  if(dir==='up'||dir==='down'){e.preventDefault();q.blur();nav(dir)}
+  return;                                         // huruf, kiri/kanan: biarkan mengetik
+ }
+ if(isNum&&!S.modal){e.preventDefault();digit(key);return}
+ if(enter&&S.dg){e.preventDefault();commitDigits();return}
+ if(chUp){e.preventDefault();zap(1);return}
+ if(chDn){e.preventDefault();zap(-1);return}
+ if(dir){
+  e.preventDefault();
+  if(!S.modal&&S.full){
+   if(dir==='down')zap(1);else if(dir==='up')zap(-1);else if(dir==='left')setFull(false);else openQ();
+   return;
+  }
+  nav(dir);return;
+ }
+ if(enter){
+  if(a===q){e.preventDefault();editSearch();return}
+  if(a===scr){e.preventDefault();setFull(!S.full);return}
+  if(a&&a.tagName==='BUTTON'){e.preventDefault();a.click();return}
+  if(S.full){e.preventDefault();setFull(false);return}
+  var f=defFocus();if(f){e.preventDefault();f.focus()}
+ }
+},true);
+$('cPv').onclick=function(){zap(-1)};$('cNx').onclick=function(){zap(1)};
+$('bLs').onclick=function(){
+ var on=app.classList.toggle('drawer');showUI();
+ if(on){var r=chs.querySelector('.row.on');try{if(r)r.scrollIntoView({block:'center'})}catch(e){}}
+};
+['mousedown','touchstart'].forEach(function(t){document.addEventListener(t,function(ev){if(ev.type==='touchstart')S.touched=true;document.body.className=document.body.className.replace(/\btv\b/g,'').trim();if(S.unmute){S.unmute=false;v.muted=false}},true)});
+
+['touchstart','touchmove','mousedown','wheel'].forEach(function(t){document.addEventListener(t,bumpFull,{capture:true,passive:true})});
+
+/* tombol Kembali pada remote: tahan dulu supaya tidak langsung menutup aplikasi */
+try{history.replaceState({d:0},'');history.pushState({d:1},'');
+ addEventListener('popstate',function(){
+  if(S.leaving)return;
+  if(back()){history.pushState({d:1},'');return}
+  showExit();history.pushState({d:1},'');
+ });
+}catch(e){}
+
+/* kunci zoom: cubitan / ketuk dua kali membuat tampilan membesar dan bergeser setelah layar penuh */
+document.addEventListener('touchmove',function(e){if(e.touches&&e.touches.length>1)e.preventDefault()},{passive:false});
+document.addEventListener('gesturestart',function(e){e.preventDefault()});
+function fixVp(){
+ try{var vv=window.visualViewport;if(!vv||vv.scale<=1.01)return;
+  var m=document.querySelector('meta[name=viewport]'),c=m.content;
+  m.content='width=device-width, initial-scale=1.0001, maximum-scale=1.0001, user-scalable=no';
+  setTimeout(function(){m.content=c},120);
+ }catch(e){}
+}
+addEventListener('resize',function(){setTimeout(fixVp,200)});
+addEventListener('orientationchange',function(){setTimeout(fixVp,300)});
+/* ---------- mulai ---------- */
+state('spin','Memuat saluran','Mencari server…');
+READY.then(function(){lib('hls').catch(function(){});setTimeout(function(){lib('shaka').catch(function(){})},300)});        /* siapkan pemutar DASH di latar belakang supaya saluran DRM tidak menunggu unduhan */
+function boot(again){
+ (again?findServer(true):READY).then(function(){return load(true)}).then(function(){var f=defFocus();if(f&&f!==scr)try{f.focus({preventScroll:true})}catch(e){f.focus()}}).catch(function(err){
+  state('idle','Tidak terhubung','Menunggu server…');
+  popup('Tidak bisa terhubung ke server','Pastikan server dan tunnel menyala, lalu coba lagi.','Server: '+(BASE||'(kosong)')+' · '+(err&&err.message||''),[
+   ['Coba lagi',function(){closeModal();boot(true)},'xp'],['Atur alamat server',askServer,'xn']]);
+ }).then(splReady);
+}
+boot();
+setInterval(refresh,60000);
+})();
+</script>
+</body>
+</html>

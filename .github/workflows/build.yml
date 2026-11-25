@@ -8,6 +8,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Pastikan dhanytv.html terbungkus di APK
+        run: |
+          if [ ! -s app/src/main/assets/index.html ]; then
+            echo "app/src/main/assets/index.html tidak ada. Bangun APK dari panel admin (Pembuat APK) agar dhanytv.html ikut dibungkus."
+            exit 1
+          fi
+          grep -q "var GH_REPO=" app/src/main/assets/index.html || { echo "index.html bukan dhanytv.html yang benar"; exit 1; }
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
