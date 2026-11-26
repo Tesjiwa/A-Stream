@@ -426,10 +426,10 @@ function recover(old){
 }
 function tunnelLost(old){if(BASE!==old)return Promise.resolve(true);return ping(BASE).then(function(ok){return ok?false:recover(old)})}
 /* fetch ke server; gagal sambung / error tunnel (530, 502-504 pada /api) -> cari alamat baru lalu ulangi sekali */
-function F(path,o){window._DTV_BASE=BASE;
+function F(path,o){
  return READY.then(function(){
   function go(again){
-   var b0=BASE;
+   var b0=BASE;window._DTV_BASE=b0;
    o=o||{};var hh=Object.assign({},o.headers||{});var tk=(localStorage.getItem('dtv_tok')||'');if(tk)hh['X-DTV-Token']=tk;o.headers=hh;
    return fetch(b0+path,o).then(function(r){
     if(r.status===401&&path!=='/api/auth'){window._NEED_PIN=true;if(window._askPin)window._askPin();}
@@ -1073,6 +1073,7 @@ $('bLs').onclick=function(){
 try{history.replaceState({d:0},'');history.pushState({d:1},'');
  addEventListener('popstate',function(){
   if(S.leaving)return;
+  if(window._pinBack&&window._pinBack()){history.pushState({d:1},'');return}
   if(back()){history.pushState({d:1},'');return}
   showExit();history.pushState({d:1},'');
  });
@@ -1105,34 +1106,39 @@ setInterval(refresh,60000);
 })();
 </script>
 
+<!-- ===== DTV PIN GATE v2 (mulai) ===== -->
 <style>
-#dtvPinGate{position:fixed;inset:0;z-index:99999;background:#070b14;display:none;align-items:center;justify-content:center;padding:24px;font-family:system-ui,-apple-system,sans-serif;color:#f8fafc;user-select:none}
-#dtvPinGate.show{display:flex}
-.pg-wrap{width:100%;max-width:320px;display:flex;flex-direction:column;align-items:center;text-align:center}
-.pg-badge{width:54px;height:54px;border-radius:50%;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.28);display:flex;align-items:center;justify-content:center;margin-bottom:18px;color:#38bdf8}
-.pg-badge svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.pg-wrap h3{margin:0 0 6px;font-size:20px;font-weight:600;letter-spacing:-.2px;color:#fff}
-.pg-wrap p{margin:0 0 26px;font-size:13px;color:#94a3b8;line-height:1.45}
-.pg-dots{display:flex;justify-content:center;gap:18px;margin-bottom:14px;height:22px;align-items:center}
-.pg-dot{width:13px;height:13px;border-radius:50%;border:2px solid #334155;background:transparent;transition:all .18s ease}
-.pg-dot.on{background:#38bdf8;border-color:#38bdf8;transform:scale(1.22);box-shadow:0 0 12px rgba(56,189,248,.55)}
-.pg-dots.shake{animation:pgShake .32s ease}
-@keyframes pgShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
-.pg-err{min-height:20px;font-size:12.5px;color:#f87171;margin-bottom:20px}
-.pg-pad{display:grid;grid-template-columns:repeat(3,72px);gap:14px 20px;justify-content:center}
-.pg-btn{width:72px;height:72px;border-radius:50%;border:0;background:rgba(255,255,255,.06);color:#f8fafc;font-size:24px;font-weight:500;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .12s,background .15s,box-shadow .15s;-webkit-tap-highlight-color:transparent}
-.pg-btn:hover{background:rgba(255,255,255,.11)}
-.pg-btn:active{transform:scale(.93);background:#0284c7;color:#fff}
-.pg-btn:focus,.pg-btn:focus-visible{outline:none;background:#0284c7;color:#fff;transform:scale(1.08);box-shadow:0 0 0 3px rgba(56,189,248,.45)}
-.pg-btn.fn{background:transparent;color:#94a3b8;font-size:13px;font-weight:600}
-.pg-btn.fn:focus,.pg-btn.fn:focus-visible{background:rgba(56,189,248,.18);color:#38bdf8;box-shadow:0 0 0 2px rgba(56,189,248,.4)}
-.pg-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-@media (min-width:768px) and (orientation:landscape){
-  .pg-wrap{max-width:680px;flex-direction:row;justify-content:space-between;text-align:left;gap:48px}
-  .pg-info{flex:1}
-  .pg-badge{margin:0 0 16px}
-  .pg-dots{justify-content:flex-start}
-}
+/* Sengaja tanpa inset, flex-gap, min()/clamp(), dan blur: aman untuk WebView Android TV lama.
+   Semua ukuran memakai em; JavaScript mengatur font-size #dtvPinGate sesuai ukuran layar. */
+#dtvPinGate{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:2147483647;display:none;overflow:auto;margin:0;padding:0;background:#050a14;color:#fff;font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:16px;line-height:1.3;-webkit-user-select:none;user-select:none}
+#dtvPinGate.show{display:-webkit-flex;display:flex}
+#dtvPinGate *{box-sizing:border-box}
+#dtvPinGate .pg-wrap{margin:auto;display:flex;flex-direction:column;align-items:center;padding:1em 0}
+#dtvPinGate .pg-info{width:17em;display:flex;flex-direction:column;align-items:center;text-align:center}
+#dtvPinGate .pg-badge{width:3.4em;height:3.4em;border-radius:50%;background:#0c2438;border:.14em solid #0284c7;display:flex;align-items:center;justify-content:center;color:#38bdf8;margin:0 0 .8em}
+#dtvPinGate .pg-badge svg{width:1.6em;height:1.6em}
+#dtvPinGate svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#dtvPinGate h3{margin:0 0 .3em;padding:0;font-size:1.55em;line-height:1.2;font-weight:700;color:#fff}
+#dtvPinGate p{margin:0;padding:0;font-size:1em;line-height:1.45;color:#cbd5e1}
+#dtvPinGate .pg-dots{display:flex;align-items:center;justify-content:center;height:2.2em;margin:.7em 0 0}
+#dtvPinGate .pg-dot{display:block;width:1.15em;height:1.15em;margin:0 .55em;border-radius:50%;border:.16em solid #64748b;background:transparent}
+#dtvPinGate .pg-dot.on{background:#38bdf8;border-color:#38bdf8;-webkit-transform:scale(1.2);transform:scale(1.2)}
+#dtvPinGate .pg-dots.shake{animation:pgShake .4s linear}
+#dtvPinGate .pg-dots.shake .pg-dot{border-color:#f87171}
+@keyframes pgShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-.8em)}40%,80%{transform:translateX(.8em)}}
+#dtvPinGate .pg-err{min-height:2.8em;margin:.2em 0 .4em;font-size:1em;font-weight:600;line-height:1.35;color:#fca5a5}
+#dtvPinGate .pg-pad{display:flex;flex-wrap:wrap;width:16.2em;flex:none}
+#dtvPinGate .pg-btn{-webkit-appearance:none;appearance:none;display:flex;flex:none;align-items:center;justify-content:center;width:4.5em;height:4.5em;margin:.45em;padding:0;border:.14em solid #334155;border-radius:50%;background:#111c30;color:#fff;font-family:inherit;font-size:1em;cursor:pointer;outline:none;transition:transform .1s;-webkit-tap-highlight-color:transparent}
+#dtvPinGate .pg-btn span{font-size:1.9em;font-weight:600;line-height:1}
+#dtvPinGate .pg-btn.fn{background:#0a1220;color:#cbd5e1}
+#dtvPinGate .pg-btn.fn span{font-size:1.1em}
+#dtvPinGate .pg-btn svg{width:1.8em;height:1.8em}
+#dtvPinGate .pg-btn.is-focus{background:#0284c7;border-color:#bae6fd;color:#fff;box-shadow:0 0 0 .25em #38bdf8;-webkit-transform:scale(1.08);transform:scale(1.08)}
+#dtvPinGate .pg-btn:active{background:#0369a1;-webkit-transform:scale(.95);transform:scale(.95)}
+#dtvPinGate.pg-wide .pg-wrap{flex-direction:row;padding:0}
+#dtvPinGate.pg-wide .pg-info{align-items:flex-start;text-align:left;margin-right:3.5em}
+#dtvPinGate.pg-wide .pg-dots{justify-content:flex-start}
+#dtvPinGate.pg-wide .pg-dot:first-child{margin-left:.15em}
 </style>
 <div id="dtvPinGate" role="dialog" aria-modal="true" aria-label="Kunci Akses PIN">
   <div class="pg-wrap">
@@ -1140,21 +1146,21 @@ setInterval(refresh,60000);
       <div class="pg-badge"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
       <h3>Masukkan PIN Akses</h3>
       <p>Lihat 4 digit PIN di Termux server.<br>Gunakan remote TV atau sentuh layar.</p>
-      <div class="pg-dots" id="pgDots"><div class="pg-dot"></div><div class="pg-dot"></div><div class="pg-dot"></div><div class="pg-dot"></div></div>
-      <div class="pg-err" id="pgErr"></div>
+      <div class="pg-dots" id="pgDots"><i class="pg-dot"></i><i class="pg-dot"></i><i class="pg-dot"></i><i class="pg-dot"></i></div>
+      <div class="pg-err" id="pgErr" aria-live="polite"></div>
     </div>
     <div class="pg-pad" id="pgPad">
-      <button type="button" class="pg-btn" data-k="1" data-r="0" data-c="0">1</button>
-      <button type="button" class="pg-btn" data-k="2" data-r="0" data-c="1">2</button>
-      <button type="button" class="pg-btn" data-k="3" data-r="0" data-c="2">3</button>
-      <button type="button" class="pg-btn" data-k="4" data-r="1" data-c="0">4</button>
-      <button type="button" class="pg-btn" data-k="5" data-r="1" data-c="1">5</button>
-      <button type="button" class="pg-btn" data-k="6" data-r="1" data-c="2">6</button>
-      <button type="button" class="pg-btn" data-k="7" data-r="2" data-c="0">7</button>
-      <button type="button" class="pg-btn" data-k="8" data-r="2" data-c="1">8</button>
-      <button type="button" class="pg-btn" data-k="9" data-r="2" data-c="2">9</button>
-      <button type="button" class="pg-btn fn" data-k="C" data-r="3" data-c="0">Reset</button>
-      <button type="button" class="pg-btn" data-k="0" data-r="3" data-c="1">0</button>
+      <button type="button" class="pg-btn" data-k="1" data-r="0" data-c="0"><span>1</span></button>
+      <button type="button" class="pg-btn" data-k="2" data-r="0" data-c="1"><span>2</span></button>
+      <button type="button" class="pg-btn" data-k="3" data-r="0" data-c="2"><span>3</span></button>
+      <button type="button" class="pg-btn" data-k="4" data-r="1" data-c="0"><span>4</span></button>
+      <button type="button" class="pg-btn" data-k="5" data-r="1" data-c="1"><span>5</span></button>
+      <button type="button" class="pg-btn" data-k="6" data-r="1" data-c="2"><span>6</span></button>
+      <button type="button" class="pg-btn" data-k="7" data-r="2" data-c="0"><span>7</span></button>
+      <button type="button" class="pg-btn" data-k="8" data-r="2" data-c="1"><span>8</span></button>
+      <button type="button" class="pg-btn" data-k="9" data-r="2" data-c="2"><span>9</span></button>
+      <button type="button" class="pg-btn fn" data-k="C" data-r="3" data-c="0"><span>Reset</span></button>
+      <button type="button" class="pg-btn" data-k="0" data-r="3" data-c="1"><span>0</span></button>
       <button type="button" class="pg-btn fn" data-k="B" data-r="3" data-c="2" aria-label="Hapus"><svg viewBox="0 0 24 24"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg></button>
     </div>
   </div>
@@ -1203,6 +1209,7 @@ setInterval(refresh,60000);
   function press(k){
     if(busy)return;
     err.textContent='';
+    dotsBox.classList.remove('shake');
     if(k==='C'){val='';paint();return;}
     if(k==='B'){val=val.slice(0,-1);paint();return;}
     if(/^\d$/.test(k)&&val.length<4){
@@ -1210,37 +1217,139 @@ setInterval(refresh,60000);
       if(val.length===4)submitPin();
     }
   }
+
+  /* ---------- fokus: sumber kebenarannya (row,col), bukan fokus bawaan browser ---------- */
+  var row=0, col=0, isOpen=false, timers=[], keeper=0, lastKeyOk=0;
+  var btns=pad.querySelectorAll('.pg-btn');
+  function shown(){return gate.classList.contains('show');}
+  function btnAt(r,c){return pad.querySelector('[data-r="'+r+'"][data-c="'+c+'"]');}
+  function focusEl(el){
+    if(document.activeElement===el)return;
+    try{el.focus({preventScroll:true});}catch(e){try{el.focus();}catch(e2){}}
+  }
+  function apply(){
+    var el=btnAt(row,col);
+    if(!el||!shown())return;
+    for(var i=0;i<btns.length;i++)btns[i].classList.toggle('is-focus',btns[i]===el);
+    focusEl(el);
+  }
+  function select(r,c){
+    row=Math.max(0,Math.min(3,r));
+    col=Math.max(0,Math.min(2,c));
+    apply();
+  }
+
+  /* ---------- ukuran: seluruh panel diskalakan agar selalu muat di layar ---------- */
+  function fit(){
+    if(!shown())return;
+    var w=gate.clientWidth||window.innerWidth, h=gate.clientHeight||window.innerHeight;
+    var wide=w>h*1.15;
+    gate.classList.toggle('pg-wide',wide);
+    /* ukuran rancangan dalam em, sudah termasuk tepi aman (overscan) TV */
+    var u=wide?Math.min(w/41,h/24):Math.min(w/19,h/41.5);
+    gate.style.fontSize=Math.max(8,Math.min(48,u))+'px';
+  }
+
+  function onOpen(){
+    row=0;col=0;
+    fit();
+    try{if(document.activeElement&&!gate.contains(document.activeElement))document.activeElement.blur();}catch(e){}
+    apply();                                       /* tombol 1 langsung terpilih */
+    [0,50,150,400,900,1800,3500].forEach(function(ms){timers.push(setTimeout(function(){fit();apply();},ms));});
+    keeper=setInterval(apply,500);                 /* ambil kembali fokus bila direbut halaman / WebView */
+  }
+  function onClose(){
+    timers.forEach(clearTimeout);timers=[];
+    clearInterval(keeper);
+  }
+  function sync(){
+    var s=shown();
+    if(s===isOpen)return;
+    isOpen=s;
+    if(s)onOpen();else onClose();
+  }
+
+  /* ---------- sentuh / klik ---------- */
   pad.addEventListener('click',function(e){
-    var b=e.target.closest('button');if(b)press(b.getAttribute('data-k'));
+    var b=e.target;
+    while(b&&b!==pad&&b.tagName.toUpperCase()!=='BUTTON')b=b.parentNode;
+    if(!b||b===pad)return;
+    /* sebagian WebView mengirim klik tambahan setelah tombol OK: jangan dihitung dua kali */
+    if(e.detail===0&&Date.now()-lastKeyOk<400)return;
+    select(+b.getAttribute('data-r'),+b.getAttribute('data-c'));
+    press(b.getAttribute('data-k'));
   });
-  document.addEventListener('keydown',function(e){
-    if(!gate.classList.contains('show'))return;
-    if(e.key>='0'&&e.key<='9'){e.preventDefault();press(e.key);return;}
-    if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();press('B');return;}
-    var cur=document.activeElement;
-    if(!cur||!pad.contains(cur)){
-      var b1=pad.querySelector('[data-k="1"]');if(b1)b1.focus();return;
+
+  /* ---------- remote D-pad & keyboard ---------- */
+  var NAMES={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',Up:'up',Down:'down',Left:'left',Right:'right'};
+  var CODES={19:'up',20:'down',21:'left',22:'right',37:'left',38:'up',39:'right',40:'down'};
+  function parse(e){
+    var k=e.key||'', kc=e.keyCode||e.which||0;
+    var noName=!k||k==='Unidentified';
+    if(/^[0-9]$/.test(k))return {num:k};
+    if(NAMES[k])return {dir:NAMES[k]};
+    if(k==='Enter'||k===' '||k==='Select'||k==='Accept'||k==='DPAD_CENTER')return {ok:true};
+    if(k==='Backspace'||k==='Delete'||k==='Escape'||k==='GoBack'||k==='BrowserBack')return {del:true};
+    if(k==='Tab')return {tab:e.shiftKey?-1:1};
+    if(k==='ChannelUp'||k==='ChannelDown'||k==='PageUp'||k==='PageDown')return {skip:true};
+    if(!noName)return null;
+    /* tanpa nama tombol: pakai keyCode */
+    if(CODES[kc])return {dir:CODES[kc]};
+    if(kc===13||kc===23||kc===66||kc===32)return {ok:true};
+    if(kc>=48&&kc<=57)return {num:String(kc-48)};
+    if(kc>=96&&kc<=105)return {num:String(kc-96)};
+    if(kc===8||kc===46||kc===67||kc===4||kc===27)return {del:true};
+    return null;
+  }
+  function onKey(e){
+    if(!shown())return;
+    var a=parse(e);
+    if(!a)return;                                  /* volume, menu, dll. dibiarkan */
+    /* hentikan di sini agar pemutar di belakang tidak ikut memproses tombol */
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    if(e.type!=='keydown')return;
+    if(a.num!==undefined){if(!e.repeat)press(a.num);return;}
+    if(a.del){press('B');return;}
+    if(a.tab){var n=(row*3+col+a.tab+12)%12;select(Math.floor(n/3),n%3);return;}
+    if(a.dir){
+      select(row+(a.dir==='down'?1:a.dir==='up'?-1:0),col+(a.dir==='right'?1:a.dir==='left'?-1:0));
+      return;
     }
-    var r=parseInt(cur.getAttribute('data-r'),10), c=parseInt(cur.getAttribute('data-c'),10);
-    if(e.key==='ArrowRight'){e.preventDefault();c=(c+1)%3;}
-    else if(e.key==='ArrowLeft'){e.preventDefault();c=(c+2)%3;}
-    else if(e.key==='ArrowDown'){e.preventDefault();r=(r+1)%4;}
-    else if(e.key==='ArrowUp'){e.preventDefault();r=(r+3)%4;}
-    else return;
-    var nxt=pad.querySelector('[data-r="'+r+'"][data-c="'+c+'"]');
-    if(nxt)nxt.focus();
+    if(a.ok){
+      lastKeyOk=Date.now();
+      if(!e.repeat){apply();press(btnAt(row,col).getAttribute('data-k'));}
+    }
+  }
+  /* fase capture di window berjalan sebelum handler pemutar (document).
+     stopPropagation mencegah handler document di bawah ini memproses tombol yang sama dua kali. */
+  ['keydown','keypress','keyup'].forEach(function(t){
+    window.addEventListener(t,onKey,true);
+    document.addEventListener(t,onKey,true);
+  });
+  document.addEventListener('focusin',function(e){
+    if(shown()&&!gate.contains(e.target))setTimeout(apply,0);
   },true);
-  window._askPin=function(){
-    localStorage.removeItem('dtv_tok');
-    var mE=document.getElementById('mE');if(mE)mE.hidden=true;
-    if(!gate.classList.contains('show')){
-      val='';paint();gate.classList.add('show');
-      setTimeout(function(){var b1=pad.querySelector('[data-k="1"]');if(b1)b1.focus();},60);
-    }
+  window.addEventListener('focus',apply);
+  window.addEventListener('resize',fit);
+  window.addEventListener('orientationchange',function(){setTimeout(fit,300);});
+
+  /* tombol Kembali APK (lewat popstate): hapus satu digit; bila sudah kosong, keluar aplikasi */
+  window._pinBack=function(){
+    if(!shown())return false;
+    if(val&&!busy){press('B');return true;}
+    try{if(window.DhanyTV&&DhanyTV.exit)DhanyTV.exit();}catch(e){}
+    return true;
   };
-  if(window._NEED_PIN)window._askPin();
+  window._askPin=function(){
+    if(!shown()){val='';busy=false;paint();err.textContent='';gate.classList.add('show');}
+    sync();
+  };
+  if(window.MutationObserver)new MutationObserver(sync).observe(gate,{attributes:true,attributeFilter:['class']});
+  window.addEventListener('load',function(){sync();apply();});
+  if(window._NEED_PIN)window._askPin();            /* 401 datang sebelum skrip ini siap */
+  sync();
 })();
 </script>
-
+<!-- ===== DTV PIN GATE v2 (selesai) ===== -->
 </body>
 </html>
