@@ -107,6 +107,8 @@ public class MainActivity extends Activity {
         root.addView(splash, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(root);
+        web.setFocusable(true);
+        web.setFocusableInTouchMode(true);
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
@@ -116,7 +118,8 @@ public class MainActivity extends Activity {
         s.setDisplayZoomControls(false);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        s.setCacheMode(WebSettings.LOAD_DEFAULT);
+        s.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        web.clearCache(true);      // buang halaman versi lama (localStorage/token tidak ikut terhapus)
 
         web.setWebViewClient(new WebViewClient() {
             @Override
@@ -135,6 +138,7 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView v, String url) {
                 // halaman galat bawaan WebView diabaikan; yang ditampilkan hanya layar offline kita
                 if (offline && !OFFLINE_BASE.equals(url)) return;
+                focusWeb();
                 hideSplash();
             }
         });
@@ -208,7 +212,10 @@ public class MainActivity extends Activity {
         if (!t.isEmpty() && !t.toLowerCase(java.util.Locale.ROOT).matches("^https?://[^/]*\\.trycloudflare\\.com(:\\d+)?(/.*)?$")) {
             try { q = "?server=" + URLEncoder.encode(t, "UTF-8"); } catch (Exception e) { q = ""; }
         }
+        // cache-busting: alamat halaman berbeda setiap aplikasi memuat
+        q += (q.isEmpty() ? "?" : "&") + "_v=" + System.currentTimeMillis();
         web.loadUrl(SECURE_BASE + q);
+        focusWeb();
     }
 
     // Dipanggil WebView (thread latar belakang) untuk alamat https virtual: sajikan halaman utama dari aset lokal.
@@ -285,7 +292,7 @@ public class MainActivity extends Activity {
             return;
         }
         splashGone = true;
-        splash.animate().alpha(0f).setDuration(250).withEndAction(() -> splash.setVisibility(View.GONE)).start();
+        splash.animate().alpha(0f).setDuration(250).withEndAction(() -> { splash.setVisibility(View.GONE); focusWeb(); }).start();
     }
 
     private void showSplashAgain() {
@@ -380,7 +387,12 @@ public class MainActivity extends Activity {
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) immersive();
+        if (hasFocus) { immersive(); focusWeb(); }
+    }
+
+    // Tombol remote hanya sampai ke halaman bila WebView memegang fokus
+    private void focusWeb() {
+        if (web != null && customView == null && !web.hasFocus()) web.requestFocus();
     }
 
     private void askServer() {
@@ -464,6 +476,7 @@ public class MainActivity extends Activity {
         super.onResume();
         web.onResume();
         immersive();
+        focusWeb();
         if (offline) { ui.removeCallbacks(retry); ui.postDelayed(retry, 1000); }
     }
 

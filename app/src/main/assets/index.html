@@ -132,6 +132,7 @@ body.tv .hint{display:block}
 .tabs{display:flex;background:var(--surf);border-radius:99px;margin:1.1rem 1.2rem .4rem;padding:.25rem}
 .tabs button{flex:1;text-align:center;padding:.65rem;font-weight:800;color:var(--mut);border-radius:99px}
 .tabs button.on{background:var(--grad);color:#fff}
+.tabs button[hidden]{display:none}
 .mfoot{padding:.8rem 1.2rem;border-top:1px solid var(--line);display:flex;justify-content:flex-end}
 .btn2{padding:.7rem 2rem;border-radius:99px;background:var(--grad);color:#fff;font-weight:800;text-align:center}
 .toast{position:fixed;left:50%;top:1.5rem;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:.75rem 1.4rem;border-radius:99px;font-weight:700;font-size:.9rem;z-index:60;max-width:90%;text-align:center;display:none;box-shadow:0 .6rem 1.6rem rgba(0,0,0,.4)}
@@ -360,7 +361,7 @@ body.tv .row:focus{background:var(--grad);border-color:transparent;transform:non
 
 <div class="spl" id="spl"><div class="splc"><img id="splImg" alt="" hidden><div class="wm" id="splTx"></div><div class="splb"><i></i></div></div></div>
 <div class="modal" id="mG" hidden><div class="mbox"><h3>Pilih grup</h3><div class="mbody" id="gList"></div></div></div>
-<div class="modal" id="mQ" hidden><div class="mbox"><div class="tabs"><button data-t="v" data-f="1">Video</button><button data-t="a" data-f="1">Audio</button></div><div class="mbody" id="qb"></div><div class="mfoot"><button class="btn2" id="qOk" data-f="1">Selesai</button></div></div></div>
+<div class="modal" id="mQ" hidden><div class="mbox"><div class="tabs"><button data-t="v" data-f="1">Video</button><button data-t="a" data-f="1">Audio</button><button data-t="r" data-f="1" id="tabR" hidden>Server</button></div><div class="mbody" id="qb"></div><div class="mfoot"><button class="btn2" id="qOk" data-f="1">Selesai</button></div></div></div>
 <div class="modal" id="mX" hidden><div class="mbox xbox">
   <h3>Yakin ingin keluar?</h3><div class="xs">Sampai jumpa lagi…</div>
   <div class="xi"><span class="xic" id="xic"></span><p>Siaran yang sedang diputar akan dihentikan. Masih banyak saluran lain yang menunggu.</p></div>
@@ -570,7 +571,9 @@ function load(first){
   if(lg!==S.lg){S.lg=lg;ls.s('dtv_lg',lg);rb=true}
   if(d.nm){ls.s('dtv_nm',d.nm);if(d.nm!==S.nm)rb=true}
   if(rb)brand(d.nm||S.nm);
+  var hadNd=JSON.stringify(S.nodes||[]);S.nodes=cleanNodes(d.nodes);
   S.pm=d.pm||'auto';S.af=d.af==null?6:d.af;if(d.th&&d.th!==ls.g('dtv_th','dark')){ls.s('dtv_th',d.th)}document.documentElement.setAttribute('data-theme',d.th||'dark');
+  if(S.modal===$('mQ')&&hadNd!==JSON.stringify(S.nodes))paintQ();
   if(d.v===S.ver&&!first)return;
   S.ver=d.v;S.all=d.c;S.num={};d.c.forEach(function(c,i){S.num[c.i]=i+1;if(S.cur&&S.cur.i===c.i)S.cur=c});
   var fk=document.activeElement&&document.activeElement.getAttribute('data-k'),ff=document.activeElement&&document.activeElement.className;
@@ -659,21 +662,65 @@ function openGroups(){
 }
 
 /* ---------- pemutar ---------- */
+/* ---------- rute server: Auto (failover berantai) / Lokal / node eksternal ----------
+   Perangkat hanya berbicara dengan server utama. Node eksternal (US, China, Singapura, dll.) dijangkau lewat gateway
+   server utama: /nx/<id_node>/... ; URL asli dan Shared Key node tidak pernah dikirim ke perangkat ini. */
+S.nodes=S.nodes||[];
+function cleanNodes(a){return Array.isArray(a)?a.filter(function(x){return x&&typeof x.id==='string'&&/^[\w-]{1,32}$/.test(x.id)}).map(function(x){return{id:x.id,name:String(x.name||x.id)}}):[]}
+function nodeById(id){for(var i=0;i<S.nodes.length;i++)if(S.nodes[i].id===id)return S.nodes[i];return null}
+function nodeName(id){var n=nodeById(id);return n?n.name:''}
+function route(){var r=ls.g('dtv_route','auto');if(r==='local')return r;if(r==='us')r=S.nodes.length?S.nodes[0].id:'auto';return r!=='auto'&&nodeById(r)?r:'auto'}
+function nodeUrl(nid,p){return BASE+'/nx/'+nid+p}
+function setRoute(r){
+ ls.s('dtv_route',r);closeModal();
+ toast('Rute server: '+(r==='auto'?'Auto':r==='local'?'Lokal (ID)':nodeName(r)||r));
+ if(S.cur){var q0=S.cur;play(q0)}
+}
+/* daftar node aktif terbaru (hanya id & nama) dari endpoint publik ringan */
+function refreshNodes(){
+ return F('/api/nodes').then(function(r){return r.ok?r.json():null}).then(function(j){
+  if(!j||!j.nodes)return;var nn=cleanNodes(j.nodes);
+  if(JSON.stringify(nn)!==JSON.stringify(S.nodes)){S.nodes=nn;if(S.modal===$('mQ'))paintQ()}
+ }).catch(function(){});
+}
+/* Susunan percobaan pemutaran per saluran.
+   - pilihan manual (Lokal / satu node): hanya rute itu.
+   - Auto: (1) rute khusus saluran dari admin, atau sumber yang cocok domain/tag sebuah node -> mulai dari node itu;
+     (2) bila tidak ada, mulai dari Lokal; lalu (3) bila gagal (HTTP 403/451/404/429/502, timeout, manifest gagal dimuat)
+     otomatis pindah ke Node Eksternal 1, Node Eksternal 2, dst. sesuai urutan prioritas, tanpa interaksi pengguna.
+   Relay lokal (Vidio/RCTI+, s.lo) tidak pernah dikirim lewat node. */
+function chain(c,loc){
+ var m=route(),out=[],seen={};
+ function add(a){var k=a.i+'|'+(a.nd||'')+'|'+(a.px?1:0);if(seen[k])return;seen[k]=1;out.push(a)}
+ function viaNode(nid){c.s.forEach(function(s,i){if(s.p&&!s.lo)add({i:i,px:true,nd:nid})})}
+ if(m==='local')return loc;
+ if(m!=='auto'){viaNode(m);return out}
+ if(c.r!=='local'){
+  if(c.r&&nodeById(c.r))viaNode(c.r);
+  else c.s.forEach(function(s,i){if(s.nd&&nodeById(s.nd)&&s.p&&!s.lo)add({i:i,px:true,nd:s.nd})});
+ }
+ loc.forEach(add);
+ S.nodes.forEach(function(n){viaNode(n.id)});
+ return out;
+}
 function needPx(s){return s.m!=='file'&&!!s.p&&(!!s.x||S.pm==='always'||(location.protocol==='https:'&&/^http:/i.test(s.u)))}
 function play(c){
  clearTimeout(S.afT);S.afOn=true;S.cur=c;app.classList.remove('drawer');ls.s('dtv_l3',c.i);S.qs={v:-1,a:0};v.style.visibility='';
  $('tNum').textContent=S.num[c.i]||'';$('tName').textContent=c.n;$('tGrp').textContent=c.g;
  $('nName').textContent=c.n;$('nGrp').textContent=c.g+(c.s.length>1?' · '+c.s.length+' sumber':'');$('nNum').textContent=S.num[c.i]||'';logo(c,$('nLg'));
  mark();paintPn();showUI();
- S.att=[];c.s.forEach(function(s,i){var p0=needPx(s);S.att.push({i:i,px:p0});if(!p0&&s.m!=='file'&&s.p)S.att.push({i:i,px:true})});
+ var loc=[];
+ c.s.forEach(function(s,i){var p0=needPx(s);loc.push({i:i,px:p0});if(!p0&&s.m!=='file'&&s.p)loc.push({i:i,px:true})});
  // DASH di browser lebih stabil melalui proxy; tetap ada fallback langsung.
  if(S.pm!=='always'){
   var dashAtt=[];
   for(var j=0;j<c.s.length;j++)if(c.s[j].m==='dash'&&c.s[j].p){dashAtt.push({i:j,px:true});if(!c.s[j].x)dashAtt.push({i:j,px:false})}
-  if(dashAtt.length){var nonDash=S.att.filter(function(a){return c.s[a.i].m!=='dash'});S.att=dashAtt.concat(nonDash)}
+  if(dashAtt.length){var nonDash=loc.filter(function(a){return c.s[a.i].m!=='dash'});loc=dashAtt.concat(nonDash)}
  }
  var pf=ls.g('dtv_ok',{})[c.i];
- if(pf){for(var k=0;k<S.att.length;k++){var a0=S.att[k],s0=c.s[a0.i];if(s0.m!=='dash'&&s0.u===pf.u&&(a0.px?1:0)===pf.px){S.att.splice(k,1);S.att.unshift(a0);break}}}
+ if(pf){for(var k=0;k<loc.length;k++){var a0=loc[k],s0=c.s[a0.i];if(s0.m!=='dash'&&s0.u===pf.u&&(a0.px?1:0)===pf.px){loc.splice(k,1);loc.unshift(a0);break}}}
+ S.att=chain(c,loc);
+ if(!S.att.length){toast('Saluran ini hanya tersedia lewat server lokal');S.att=loc}
  S.ai=0;S.rcv=0;S.errs=[];next();
 }
 function teardown(){
@@ -694,19 +741,24 @@ function next(){
   if(id!==S.aid)return;
   var a=S.att[S.ai++];if(!a)return dead();
   var s=S.cur.s[a.i],url=a.px?BASE+s.p:s.u;
-  var vm=String(s.u||'').match(/^https?:\/\/(?:[^\/]+\.trycloudflare\.com|vidio123\.mikrofast\.web\.id|127\.0\.0\.1(?::\d+)?|localhost(?::\d+)?)(\/(?:vidio\/\d+\/index\.mpd|rctiplus\/[a-zA-Z0-9_-]+\/index\.m3u8)(?:[?#].*)?)$/i);
+  var vm=a.nd?null:String(s.u||'').match(/^https?:\/\/(?:[^\/]+\.trycloudflare\.com|vidio123\.mikrofast\.web\.id|127\.0\.0\.1(?::\d+)?|localhost(?::\d+)?)(\/(?:vidio\/\d+\/index\.mpd|rctiplus\/[a-zA-Z0-9_-]+\/index\.m3u8)(?:[?#].*)?)$/i);
   if(vm){url=(BASE||location.origin)+vm[1];a.px=0;}
+  if(a.nd){
+   if(!nodeById(a.nd)){S.errs.push('Server node tidak lagi tersedia');return next()}
+   url=nodeUrl(a.nd,s.p);       /* lewat gateway server utama: sama asal dengan halaman, bebas mixed-content */
+  }
+  $('nGrp').textContent=S.cur.g+(S.cur.s.length>1?' · '+S.cur.s.length+' sumber':'')+(a.nd?' · '+nodeName(a.nd):'');
   var _tk=(localStorage.getItem('dtv_tok')||'');if(_tk&&url&&/^https?:\/\/(?:localhost|127\.0\.0\.1|[^\/]+\.trycloudflare\.com)/i.test(url)){url+=(url.indexOf('?')>=0?'&':'?')+'dtv_tok='+encodeURIComponent(_tk);}
-  S.curA={c:S.cur.i,u:s.u,px:a.px?1:0};
-  var tag=(a.px?'proxy':'langsung')+(S.cur.s.length>1?' #'+(a.i+1):'');
+  S.curA={c:S.cur.i,u:s.u,px:a.px?1:0,us:a.nd?1:0,nd:a.nd||''};
+  var tag=(a.nd?'node '+nodeName(a.nd):a.px?'proxy':'langsung')+(S.cur.s.length>1?' #'+(a.i+1):'');
   var base0=BASE;
   var fail=function(why){if(id!==S.aid)return;S.errs.push(tag+': '+(typeof why==='string'?why:'gagal/timeout'));next()};
   /* sumber via proxy gagal & tunnel ternyata sudah berganti alamat -> ambil server.json lagi, ulangi sumber yang sama (sekali per saluran) */
-  var bad=S.bad=function(why){if(id!==S.aid)return;if((!a.px&&!vm)||S.rcv)return fail(why);S.rcv=1;
+  var bad=S.bad=function(why){if(id!==S.aid)return;if(a.nd||(!a.px&&!vm)||S.rcv)return fail(why);S.rcv=1;
    tunnelLost(base0).then(function(ch){if(id!==S.aid)return;if(ch){S.ai--;S.errs.push(tag+': tunnel berganti, diulang');next()}else fail(why)},function(){fail(why)})};
   state('spin',S.cur.n,S.ai>1?'Mencoba sumber lain…':'Menyambungkan siaran…');
   /* batas waktu pemutaran (di luar waktu mengunduh pustaka pemutar) */
-  var lim=s.m==='file'?25:s.m==='dash'?(a.px?30:20):(a.px?15:8);
+  var lim=(s.m==='file'?25:s.m==='dash'?(a.px?30:20):(a.px?15:8))+(a.nd?10:0);
   function arm(sec){clearTimeout(S.wd);S.wd=setTimeout(function(){bad('tidak ada data dalam '+sec+' dtk')},sec*1000)}
   function withLib(n,fn){arm(45);lib(n).then(function(){if(id!==S.aid)return;arm(lim);fn()}).catch(function(){bad('library pemutar gagal dimuat')})}
   if(s.m==='file'){arm(lim);v.src=url;tryPlay()}
@@ -736,7 +788,7 @@ function tryPlay(){
 }
 function playHls(src,bad){
  if(window.Hls&&Hls.isSupported()){
-  var h=S.hls=new Hls({xhrSetup:function(xhr){var t=localStorage.getItem('dtv_tok');if(t)xhr.setRequestHeader('X-DTV-Token',t);},enableWorker:true,lowLatencyMode:false,startFragPrefetch:true,abrEwmaDefaultEstimate:1500000,maxBufferLength:30,maxMaxBufferLength:60,backBufferLength:10,capLevelToPlayerSize:true,liveSyncDurationCount:3,abrBandWidthFactor:.8,abrBandWidthUpFactor:.6,startLevel:0,fragLoadingTimeOut:20000,fragLoadingMaxRetry:4,fragLoadingRetryDelay:500,manifestLoadingTimeOut:10000,manifestLoadingMaxRetry:1,manifestLoadingRetryDelay:500,levelLoadingTimeOut:10000,levelLoadingMaxRetry:2,levelLoadingRetryDelay:500});
+  var h=S.hls=new Hls({xhrSetup:function(xhr,u){var t=localStorage.getItem('dtv_tok');if(t)xhr.setRequestHeader('X-DTV-Token',t);},enableWorker:true,lowLatencyMode:false,startFragPrefetch:true,abrEwmaDefaultEstimate:1500000,maxBufferLength:30,maxMaxBufferLength:60,backBufferLength:10,capLevelToPlayerSize:true,liveSyncDurationCount:3,abrBandWidthFactor:.8,abrBandWidthUpFactor:.6,startLevel:0,fragLoadingTimeOut:20000,fragLoadingMaxRetry:4,fragLoadingRetryDelay:500,manifestLoadingTimeOut:10000,manifestLoadingMaxRetry:1,manifestLoadingRetryDelay:500,levelLoadingTimeOut:10000,levelLoadingMaxRetry:2,levelLoadingRetryDelay:500});
   var rec=0;S.mv=null;S.mvLock=false;S.mvCur=-1;S.mvSrc=src;
   h.on(Hls.Events.MANIFEST_LOADED,function(_,d){if(S.mvLock||!d||!d.levels)return;S.mv=d.levels.map(function(l){return{u:(l.url instanceof Array?l.url[0]:l.url),w:l.width||0,h:l.height||0,b:l.bitrate||0,n:l.name||''}})});
   h.loadSource(src);h.attachMedia(v);
@@ -848,7 +900,8 @@ function playDash(s,src,bad,id){
   p.attach(v).then(function(){return p.load(src)}).then(tryPlay).catch(function(e){fail(e,true)});
  }).catch(function(e){bad(shWhy(e))});
 }
-function rememberOk(){var a=S.curA;if(!a||a.done)return;a.done=true;try{fetch(BASE+'/api/using',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:a.c,u:a.u,px:a.px})}).catch(function(){})}catch(e){}   /* lapor ke server: sumber ini yang tayang (tampil di panel admin) */
+function rememberOk(){var a=S.curA;if(!a||a.done)return;a.done=true;try{fetch(BASE+'/api/using',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:a.c,u:a.u,px:a.px,us:a.us,nd:a.nd||''})}).catch(function(){})}catch(e){}   /* lapor ke server: sumber ini yang tayang (tampil di panel admin) */
+ if(a.nd)return;
  var m=ls.g('dtv_ok',{}),ks=Object.keys(m);if(ks.length>300&&!m[a.c])delete m[ks[0]];m[a.c]={u:a.u,px:a.px};ls.s('dtv_ok',m)}
 v.onplaying=function(){clearTimeout(S.wd);clearTimeout(S.wt);$('st').className='state hide';if(S.modal===$('mE'))closeModal();rememberOk();armFull()};
 v.onwaiting=function(){clearTimeout(S.wt);S.wt=setTimeout(function(){if(S.cur&&!v.paused)play(S.cur)},30000)};  // macet lama: sambung ulang
@@ -910,7 +963,12 @@ function armFull(){
 /* ---------- kualitas ---------- */
 function paintQ(){
  var b=$('qb'),h=S.hls,sp=S.shaka,it=[];b.innerHTML='';
+ $('tabR').hidden=!S.nodes.length;if(!S.nodes.length&&S.qt==='r')S.qt='v';
  var tb=$('mQ').querySelectorAll('.tabs button');for(var i=0;i<tb.length;i++)tb[i].classList.toggle('on',tb[i].getAttribute('data-t')===S.qt);
+ if(S.qt==='r'){
+  [['auto','Auto'],['local','Lokal (ID)']].concat(S.nodes.map(function(n){return[n.id,n.name]})).forEach(function(x){var e=document.createElement('button');e.className='qi'+(route()===x[0]?' on':'');e.setAttribute('data-f','1');e.innerHTML='<span></span>';e.firstChild.textContent=x[1];e.onclick=function(){setRoute(x[0])};b.appendChild(e)});
+  return;
+ }
  if(S.qt==='v'){
   it=[['none','Tidak ada'],[-1,'Otomatis']];
   if(sp){var seen={};sp.getVariantTracks().sort(function(a,b){return a.height-b.height}).forEach(function(t){var k=t.height+'x'+t.bandwidth;if(seen[k])return;seen[k]=1;it.push([t.id,(t.width&&t.height?t.width+' × '+t.height+', ':'')+(t.bandwidth/1e6).toFixed(2)+' Mbps'])})}
@@ -944,7 +1002,7 @@ function applyQ(){
   else{v.style.visibility='';if(S.mvCur>=0){S.mvCur=-1;S.mvLock=false;h.loadSource(S.mvSrc)}else h.currentLevel=id}
   if(h.audioTracks.length)h.audioTrack=S.qs.a}
 }
-function openQ(){if(!S.cur)return;S.qt='v';paintQ();openModal($('mQ'),$('qb').querySelector('.on')||$('qb').querySelector('.qi')||$('qOk'))}
+function openQ(){if(!S.cur)return;S.qt='v';paintQ();refreshNodes();openModal($('mQ'),$('qb').querySelector('.on')||$('qb').querySelector('.qi')||$('qOk'))}
 $('bQ').onclick=openQ;$('qOk').onclick=closeModal;
 (function(){var t=$('mQ').querySelectorAll('.tabs button');for(var i=0;i<t.length;i++)t[i].onclick=function(){S.qt=this.getAttribute('data-t');paintQ()}})();
 
@@ -970,6 +1028,7 @@ function defFocus(){
 }
 function nav(dir){
  var root=S.modal||document,cur=document.activeElement;
+ if(dir==='down'&&S.modal===$('mQ')&&cur&&cur.parentNode&&cur.parentNode.className==='tabs'){var q1=$('qb').querySelector('.on')||$('qb').querySelector('.qi');if(q1){q1.focus();return}}
  if(!S.modal&&cur&&cur.parentNode&&cur.parentNode.className==='rw'&&chs.contains(cur)){   // jalur cepat di daftar saluran
   var rw=cur.parentNode,onFv=cur.classList.contains('fv'),sib,t;
   if(dir==='down'||dir==='up'){
