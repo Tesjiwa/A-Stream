@@ -8,10 +8,11 @@
 <style>
 /* Sengaja tanpa dvh / inset / aspect-ratio / gap-flex / container query / clamp:
    fitur itu tidak ada di WebView Android TV versi lama dan membuat tata letak runtuh. */
-:root{--bg:#070914;--glow:radial-gradient(ellipse at 15% 0%,rgba(70,100,255,.22),transparent 55%),radial-gradient(ellipse at 100% 100%,rgba(138,107,255,.14),transparent 50%);
+:root{--bg:#070914;--glow:radial-gradient(ellipse at 15% 0%,rgba(var(--glr),.22),transparent 55%),radial-gradient(ellipse at 100% 100%,rgba(138,107,255,.14),transparent 50%);
  --panel:#0e1126;--surf:#171b3a;--surf2:#202650;--tx:#eef0fc;--mut:#8e94c0;--line:rgba(255,255,255,.07);
  --ac:#38a1ff;--ac2:#8a6bff;--live:#ff4d6d;--tileA:#2c3470;--tileB:#171b3c;--sel:rgba(90,130,255,.15);--chip:rgba(255,255,255,.08);
- --shadow:0 .7rem 2rem rgba(0,0,0,.5);--grad:linear-gradient(115deg,#2f93f5,#7b5cf5)}
+ --shadow:0 .7rem 2rem rgba(0,0,0,.5);--acr:56,161,255;--ac2r:138,107,255;--glr:70,100,255;--liver:255,61,110;--ctlr:18,20,40;
+ --gA:#22a6ff;--gM:#6a63ff;--gB:#a24bff;--grad:linear-gradient(115deg,var(--gA) 0%,var(--gM) 55%,var(--gB) 100%)}
 :root[data-theme=light]{--bg:#e8ecf6;--glow:radial-gradient(ellipse at 15% 0%,rgba(90,140,255,.22),transparent 55%),radial-gradient(ellipse at 100% 100%,rgba(138,107,255,.14),transparent 50%);
  --panel:#fff;--surf:#eff2fa;--surf2:#e2e7f4;--tx:#12162b;--mut:#646d98;--line:rgba(18,22,43,.08);--ac:#1479d8;--ac2:#6b4be0;
  --tileA:#dde4f6;--tileB:#c9d3ee;--sel:rgba(47,140,255,.12);--chip:rgba(18,22,43,.06);--shadow:0 .7rem 1.8rem rgba(40,55,110,.18)}
@@ -63,7 +64,7 @@ video{position:absolute;left:0;top:0;width:100%;height:100%;display:block;object
 .sp{flex:1}
 .live{background:rgba(0,0,0,.55);border-radius:99px;padding:.45rem 1rem .45rem .85rem;font-weight:800;font-size:.85rem;display:flex;align-items:center;letter-spacing:.02em}
 .live::before{content:"";width:.55rem;height:.55rem;border-radius:50%;background:var(--live);margin-right:.5rem;box-shadow:0 0 .6rem var(--live)}
-.cb{width:2.8rem;height:2.8rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;border-radius:50%;background:rgba(0,0,0,.5);margin-left:.55rem;color:#fff}
+.cb{width:2.8rem;height:2.8rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;border-radius:50%;background:rgba(var(--ctlr),.5);margin-left:.55rem;color:#fff}
 .full .screen:not(.ui) .top,.full .screen:not(.ui) .bot{opacity:0;visibility:hidden}
 .state{position:absolute;left:0;top:0;right:0;bottom:0;z-index:2;display:flex;align-items:center;justify-content:center;text-align:center;padding:1.2rem;background:radial-gradient(circle at 50% 32%,rgba(64,76,190,.5),rgba(6,8,20,.96) 70%);color:#fff}
 .state.hide{display:none}
@@ -72,7 +73,7 @@ video{position:absolute;left:0;top:0;width:100%;height:100%;display:block;object
 .ico{width:4.2rem;height:4.2rem;border-radius:50%;margin:0 auto;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:2.1rem}
 .state.err .ico{background:rgba(255,77,109,.2);color:#ff8aa0}
 .state .btn{margin-top:1.1rem;display:inline-block;padding:.75rem 1.8rem;border-radius:99px;background:rgba(255,255,255,.16);font-weight:800;text-align:center;color:#fff}
-.spin{width:3rem;height:3rem;margin:0 auto;border-radius:50%;border:.28rem solid rgba(255,255,255,.12);border-top-color:#38a1ff;border-right-color:#8a6bff;animation:sp .8s linear infinite}
+.spin{width:3rem;height:3rem;margin:0 auto;border-radius:50%;border:.28rem solid rgba(255,255,255,.12);border-top-color:var(--ac);border-right-color:var(--ac2);animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 .hud{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);background:rgba(0,0,0,.78);border-radius:1rem;padding:.6rem 1.6rem;font-weight:800;font-size:1.8rem;z-index:4;pointer-events:none;display:none;font-variant-numeric:tabular-nums;color:#fff}
 .hud.on{display:block}
@@ -84,7 +85,7 @@ video{position:absolute;left:0;top:0;width:100%;height:100%;display:block;object
 .pill span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pill em{font-style:normal;color:var(--mut);font-weight:600;font-size:.8rem;margin-left:.5rem;flex:none}
 .pill svg{font-size:1.4rem;flex:none;margin-left:.1rem}
-.now{display:flex;align-items:center;margin:.35rem 1rem .5rem;padding:.7rem .9rem .7rem .7rem;border-radius:1.1rem;background:linear-gradient(115deg,rgba(56,161,255,.17),rgba(138,107,255,.17));border:1px solid var(--line)}
+.now{display:flex;align-items:center;margin:.35rem 1rem .5rem;padding:.7rem .9rem .7rem .7rem;border-radius:1.1rem;background:linear-gradient(115deg,rgba(var(--acr),.17),rgba(var(--ac2r),.17));border:1px solid var(--line)}
 .now .lg{width:3.3rem;height:3.3rem;margin-right:.8rem}
 .now .nm b{font-size:1.05rem}
 .nn{font-size:1.9rem;font-weight:800;line-height:1;margin-left:.6rem;font-variant-numeric:tabular-nums;color:var(--ac)}
@@ -114,6 +115,14 @@ video{position:absolute;left:0;top:0;width:100%;height:100%;display:block;object
 @media (prefers-reduced-motion:reduce){.eq i{animation:none;height:70%}.spin{animation-duration:2s}}
 .fv{width:2.8rem;height:2.8rem;flex:none;font-size:1.35rem;color:var(--mut);display:flex;align-items:center;justify-content:center;border-radius:50%;margin-left:.15rem}
 .fv svg{opacity:.4}.fv.on svg{opacity:1;color:#f7b500}
+/* tambahan: jam tayang event & label LIVE di kategori Events (bentuk lain tetap seperti semula) */
+.evt{flex:none;margin-left:.5rem;padding:.25rem .6rem;border-radius:99px;background:rgba(var(--acr),.16);color:var(--ac);font-weight:800;font-size:.72rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+.evt.lv{background:var(--live);color:#fff;letter-spacing:.03em}
+.evt.lv::before{content:"";display:inline-block;width:.42rem;height:.42rem;margin-right:.35rem;border-radius:50%;background:#fff;vertical-align:middle;animation:evp 1.2s ease-in-out infinite}
+.evt.nd{opacity:.6}
+body.tv .row:focus .evt:not(.lv){background:rgba(255,255,255,.22);color:#fff}
+@keyframes evp{0%,100%{opacity:1}50%{opacity:.25}}
+.qi small.live{background:var(--live);color:#fff;padding:.2rem .65rem;border-radius:99px;font-size:.75rem;font-weight:800;letter-spacing:.03em}
 .empty{padding:2.2rem 1.2rem;text-align:center;color:var(--mut);font-size:.95rem;line-height:1.6}
 .more{display:block;width:100%;padding:.9rem;text-align:center;color:var(--mut);font-weight:700;border-radius:1rem;margin-top:.3rem;background:var(--surf)}
 .hint{display:none;padding:.6rem 1.1rem;font-size:.72rem;color:var(--mut);border-top:1px solid var(--line);line-height:1.4}
@@ -145,11 +154,11 @@ body.tv .hint{display:block}
 
 /* ---------- fokus remote (hanya tampil saat memakai tombol, bukan sentuhan) ---------- */
 input:focus{border-color:var(--ac)}
-body.tv .row:focus{background:var(--grad);color:#fff;box-shadow:0 .4rem 1.3rem rgba(70,100,255,.5),0 0 0 .13rem rgba(255,255,255,.92);transform:scale(1.02);z-index:2}
+body.tv .row:focus{background:var(--grad);color:#fff;box-shadow:0 .4rem 1.3rem rgba(var(--glr),.5),0 0 0 .13rem rgba(255,255,255,.92);transform:scale(1.02);z-index:2}
 body.tv .row:focus::before{display:none}
 body.tv .row:focus .nm small,body.tv .row:focus .no,body.tv .row:focus .nm b{color:#fff}
 body.tv .row:focus .eq i{background:#fff}
-body.tv .fv:focus,body.tv .cb:focus,body.tv .pill:focus,body.tv .qi:focus,body.tv .tabs button:focus,body.tv .btn2:focus,body.tv .live:focus,body.tv .state .btn:focus,body.tv .more:focus{background:var(--grad);color:#fff;box-shadow:0 .3rem 1.1rem rgba(70,100,255,.5),0 0 0 .13rem rgba(255,255,255,.92)}
+body.tv .fv:focus,body.tv .cb:focus,body.tv .pill:focus,body.tv .qi:focus,body.tv .tabs button:focus,body.tv .btn2:focus,body.tv .live:focus,body.tv .state .btn:focus,body.tv .more:focus{background:var(--grad);color:#fff;box-shadow:0 .3rem 1.1rem rgba(var(--glr),.5),0 0 0 .13rem rgba(255,255,255,.92)}
 body.tv .fv:focus svg{opacity:1;color:#fff}
 body.tv .qi:focus small,body.tv .qi:focus{color:#fff}
 body.tv .screen:focus{box-shadow:0 0 0 .2rem var(--ac),var(--shadow)}
@@ -164,7 +173,7 @@ body.tv .srch input:focus{box-shadow:0 0 0 .18rem var(--ac);border-color:transpa
 .xi p{font-size:.85rem;line-height:1.5;color:var(--mut)}
 .xy,.xn{display:block;width:100%;text-align:center;padding:.85rem;border-radius:99px;font-weight:800;font-size:1rem;margin-top:.55rem}
 .xy{background:linear-gradient(115deg,#ff5d6c,#e8362f);color:#fff}.xn{background:var(--surf);color:var(--tx)}
-body.tv .xy:focus,body.tv .xn:focus{box-shadow:0 0 0 .2rem var(--ac),0 .4rem 1.2rem rgba(70,100,255,.4)}
+body.tv .xy:focus,body.tv .xn:focus{box-shadow:0 0 0 .2rem var(--ac),0 .4rem 1.2rem rgba(var(--glr),.4)}
 @keyframes pop{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:none}}
 .modal:not([hidden]) .mbox{animation:pop .18s ease-out}
 
@@ -209,7 +218,7 @@ body.tv .pn:focus{box-shadow:0 0 0 .14rem rgba(255,255,255,.92)}
    Efek kaca, bayangan & animasi hanya di desktop (kursor) dan HP posisi tegak.
    ===================================================================== */
 :root{--bg:#060813;--panel:#0d1024;--surf:#161a38;--surf2:#1f2550;--ac:#3ba7ff;--ac2:#9a6bff;--live:#ff3d6e;
- --grad:linear-gradient(115deg,#22a6ff 0%,#6a63ff 55%,#a24bff 100%);--card:rgba(255,255,255,.045);--ring:rgba(255,255,255,.1)}
+ --grad:linear-gradient(115deg,var(--gA) 0%,var(--gM) 55%,var(--gB) 100%);--card:rgba(255,255,255,.045);--ring:rgba(255,255,255,.1)}
 :root[data-theme=light]{--bg:#e9edf8;--panel:#ffffff;--surf:#f0f3fb;--surf2:#e3e8f5;--card:rgba(18,22,43,.035);--ring:rgba(18,22,43,.1)}
 
 /* latar: dua cahaya lembut statis (murah untuk GPU) */
@@ -257,8 +266,8 @@ body.tv .pn:focus{box-shadow:0 0 0 .14rem rgba(255,255,255,.92)}
 /* kontrol pemutar */
 .bot{padding:1.2rem 1.1rem .9rem;background:linear-gradient(transparent,rgba(0,0,0,.82))}
 .top{background:linear-gradient(rgba(0,0,0,.82),transparent)}
-.cb{width:3rem;height:3rem;margin-left:.6rem;background:rgba(18,20,40,.62);border:1px solid rgba(255,255,255,.16)}
-.live{background:rgba(255,61,110,.2);border:1px solid rgba(255,61,110,.5);color:#fff;padding:.5rem 1.1rem .5rem .9rem}
+.cb{width:3rem;height:3rem;margin-left:.6rem;background:rgba(var(--ctlr),.62);border:1px solid rgba(255,255,255,.16)}
+.live{background:rgba(var(--liver),.2);border:1px solid rgba(var(--liver),.5);color:#fff;padding:.5rem 1.1rem .5rem .9rem}
 .chinfo .num{border-radius:.6rem;padding:.12rem .65rem}
 .chinfo b{font-size:1.4rem}
 .hud{border-radius:1.2rem;border:1px solid rgba(255,255,255,.14);background:rgba(10,12,30,.82)}
@@ -300,7 +309,7 @@ body.tv .pn:focus{box-shadow:0 0 0 .14rem rgba(255,255,255,.92)}
  .row{transition:background .15s}
  .eq i{animation:eq .9s ease-in-out infinite;height:30%}
  .live::before{animation:lv 1.6s ease-out infinite}
- @keyframes lv{0%{box-shadow:0 0 0 0 rgba(255,61,110,.6)}100%{box-shadow:0 0 0 .55rem rgba(255,61,110,0)}}
+ @keyframes lv{0%{box-shadow:0 0 0 0 rgba(var(--liver),.6)}100%{box-shadow:0 0 0 .55rem rgba(var(--liver),0)}}
  .spin{box-shadow:0 0 1.6rem rgba(106,99,255,.45)}
  .mbox{box-shadow:0 1.6rem 4rem rgba(0,0,0,.6)}
 }
@@ -336,7 +345,7 @@ body.tv .row:focus{background:var(--grad);border-color:transparent;transform:non
 @keyframes splIn{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:none}}
 @keyframes splBar{to{width:100%}}
 </style>
-</head>
+<style id="dtvcol">:root:root:root{--ac:#ea580c;--ac2:#db2777;--gA:#ea580c;--gM:#e23f41;--gB:#db2777;--acr:234,88,12;--ac2r:219,39,119;--glr:234,88,12;--sel:rgba(234,88,12,.12)}</style></head>
 <body>
 <div id="app">
   <section class="stage">
@@ -452,6 +461,8 @@ function askServer(){
 }
 /* tema pemutar (diatur admin): dipakai dari ingatan perangkat dulu supaya tidak berkedip */
 document.documentElement.setAttribute('data-theme',ls.g('dtv_th','dark'));
+var COLK=[];
+var _cc=ls.g('dtv_col',null);if(_cc)applyColors(_cc);      /* warna terakhir dari server: dipakai sebelum daftar saluran selesai dimuat */
 var LIBS={
  hls:['https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js','https://unpkg.com/hls.js@1.5.17/dist/hls.min.js'],
  shaka:['https://cdn.jsdelivr.net/npm/shaka-player@4.7.11/dist/shaka-player.compiled.js','https://unpkg.com/shaka-player@4.7.11/dist/shaka-player.compiled.js'],
@@ -473,7 +484,7 @@ var IC={
 function ic(k){return '<svg viewBox="0 0 24 24"><path d="'+IC[k]+'"/></svg>'}
 
 var v=$('v'),scr=$('scr'),app=$('app'),chs=$('chs'),q=$('q');
-var S={all:[],view:[],num:{},grp:'Semua',q:'',cur:null,favs:ls.g('dtv_f3',[]),hls:null,shaka:null,pm:'auto',lim:80,ver:'',
+var S={all:[],view:[],num:{},grp:'Semua',q:'',cur:null,favs:ls.g('dtv_f3',[]),hls:null,shaka:null,pm:'auto',lim:80,ver:'',skew:0,
  aid:0,att:[],ai:0,wd:0,wt:0,full:false,modal:null,opener:null,dg:'',unmute:false,qs:{v:-1,a:0},qt:'v',exitT:0,bad:null,touched:false,rot:false};
 var NATIVE=false;try{NATIVE=!!(window.DhanyTV&&typeof DhanyTV.rotate!=='undefined')}catch(e){}
 
@@ -566,16 +577,20 @@ function lib(n){
 
 /* ---------- data saluran (dari admin) ---------- */
 function load(first){
- return F('/api/channels').then(function(r){if(!r.ok)throw Error('HTTP '+r.status);return r.json()}).then(function(d){
+ return F('/api/channels').then(function(r){if(!r.ok)throw Error('HTTP '+r.status);
+  try{var dh=r.headers&&r.headers.get&&r.headers.get('date'),sv=dh?Date.parse(dh):0;if(sv){var sk=(sv-Date.now())/1000;if(Math.abs(sk)<172800)S.skew=sk}}catch(e){}   /* samakan jam perangkat dengan server */
+  return r.json()}).then(function(d){
   var lg=d.lg||0,rb=false;
   if(lg!==S.lg){S.lg=lg;ls.s('dtv_lg',lg);rb=true}
   if(d.nm){ls.s('dtv_nm',d.nm);if(d.nm!==S.nm)rb=true}
   if(rb)brand(d.nm||S.nm);
   var hadNd=JSON.stringify(S.nodes||[]);S.nodes=cleanNodes(d.nodes);
   S.pm=d.pm||'auto';S.af=d.af==null?6:d.af;if(d.th&&d.th!==ls.g('dtv_th','dark')){ls.s('dtv_th',d.th)}document.documentElement.setAttribute('data-theme',d.th||'dark');
+  applyColors(d.col||{});ls.s('dtv_col',d.col||{});      /* warna aksen / kontrol pemutar / label live dari pengaturan admin */
   if(S.modal===$('mQ')&&hadNd!==JSON.stringify(S.nodes))paintQ();
   if(d.v===S.ver&&!first)return;
-  S.ver=d.v;S.all=d.c;S.num={};d.c.forEach(function(c,i){S.num[c.i]=i+1;if(S.cur&&S.cur.i===c.i)S.cur=c});
+  S.ver=d.v;S.top=d.top||'';S.all=d.c;S.num={};var nowCh=false;d.c.forEach(function(c,i){S.num[c.i]=i+1;if(S.cur&&S.cur.i===c.i){var o=S.cur;S.cur=c;if(o.n!==c.n||o.l!==c.l||o.g!==c.g)nowCh=true}});
+  if(nowCh)paintNowBox();      /* nama/logo baru dari M3U langsung tampil di kotak 'sedang diputar' */
   var fk=document.activeElement&&document.activeElement.getAttribute('data-k'),ff=document.activeElement&&document.activeElement.className;
   if(first)S.grp=pickGroup();else if(!grpOk(S.grp))S.grp=S.defGrp||'Semua';
   filter(true);
@@ -612,6 +627,22 @@ function logo(x,el){
  el.textContent='';el.style.background='';
  if(x.l){var i=new Image();i.decoding='async';i.loading='lazy';i.src=x.l;i.referrerPolicy='no-referrer';i.onerror=function(){if(i.parentNode)i.parentNode.removeChild(i);fb(x,el)};el.appendChild(i)}else fb(x,el);
 }
+var MON=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+function evFmt(s){s=String(s||'');if(!/^\d{12}$/.test(s))return '';var m=parseInt(s.substr(4,2),10);if(m<1||m>12)return '';return parseInt(s.substr(6,2),10)+' '+MON[m-1]+' '+s.substr(8,2)+':'+s.substr(10,2)}
+function isEv(k){return /^events?$/i.test(k)}
+function applyColors(m){
+ var st=document.documentElement.style,i,k,sc=document.getElementById('dtvcol');
+ for(i=0;i<COLK.length;i++)st.removeProperty(COLK[i]);
+ COLK=[];
+ if(sc&&sc.parentNode)sc.parentNode.removeChild(sc);      /* <style> sisipan server diganti nilai terbaru */
+ if(!m)return;
+ for(k in m){if(m.hasOwnProperty(k)&&/^--[a-zA-Z0-9]+$/.test(k)&&/^[#a-zA-Z0-9(),.% -]+$/.test(String(m[k]))){st.setProperty(k,String(m[k]));COLK.push(k)}}
+}
+function nowS(){return Date.now()/1000+(S.skew||0)}
+function evState(x){var n=nowS();if(x.t0&&x.t1){if(n>=x.t1)return 'nd';if(n>=x.t0)return 'lv'}return ''}
+function paintEv(el){var x=el._x,s=evState(x),c='evt'+(s?' '+s:''),t=s==='lv'?'SEDANG LIVE':s==='nd'?'Selesai':evFmt(x.ev);if(el.className!==c)el.className=c;if(el.textContent!==t)el.textContent=t}
+function tickEv(){var l=document.querySelectorAll('.evt'),i;for(i=0;i<l.length;i++)if(l[i]._x)paintEv(l[i])}
+function paintNowBox(){var c=S.cur;if(!c)return;$('tName').textContent=c.n;$('tGrp').textContent=c.g;$('nName').textContent=c.n;$('nGrp').textContent=c.g+(c.s.length>1?' \u00b7 '+c.s.length+' sumber':'');logo(c,$('nLg'))}
 function mkRow(x){
  var d=document.createElement('div');d.className='rw';
  d.innerHTML='<button class="row" data-f="1"><span class="no"></span><span class="lg"></span><span class="nm"><b></b><small></small></span><span class="eq"><i></i><i></i><i></i></span></button><button class="fv" data-f="1" aria-label="Favorit">'+ic('star')+'</button>';
@@ -619,6 +650,8 @@ function mkRow(x){
  r.setAttribute('data-k',x.i);fv.setAttribute('data-k',x.i);
  r.querySelector('.no').textContent=S.num[x.i];logo(x,r.querySelector('.lg'));
  r.querySelector('b').textContent=x.n;r.querySelector('small').textContent=x.g+(x.s.length>1?' · '+x.s.length+' sumber':'');
+ if(x.ev&&evFmt(x.ev)){r.querySelector('b').textContent=x.el||x.n;r.querySelector('small').textContent=x.en||x.g;
+  var et=document.createElement('span');et._x=x;paintEv(et);r.insertBefore(et,r.querySelector('.eq'))}
  if(S.cur&&S.cur.i===x.i)r.classList.add('on');
  if(S.favs.indexOf(x.i)>=0)fv.classList.add('on');
  r.onclick=function(){play(x)};
@@ -654,9 +687,10 @@ $('gBtn').onclick=openGroups;
 
 function openGroups(){
  var c={};S.all.forEach(function(x){c[x.g]=(c[x.g]||0)+1});
- var items=[['Semua',S.all.length],['★ Favorit',S.all.filter(function(x){return S.favs.indexOf(x.i)>=0}).length]].concat(Object.keys(c).sort().map(function(k){return[k,c[k]]}));
+ var evK=null;Object.keys(c).forEach(function(k){if(isEv(k))evK=k});
+ var items=(evK?[[evK,c[evK],1]]:[]).concat([['Semua',S.all.length],['★ Favorit',S.all.filter(function(x){return S.favs.indexOf(x.i)>=0}).length]]).concat(Object.keys(c).filter(function(k){return k!==evK}).map(function(k){return[k,c[k]]}));
  var b=$('gList');b.innerHTML='';
- items.forEach(function(it){var e=document.createElement('button');e.className='qi'+(it[0]===S.grp?' on':'');e.setAttribute('data-f','1');e.innerHTML='<span></span><small></small>';e.firstChild.textContent=it[0];e.lastChild.textContent=it[1];
+ items.forEach(function(it){var e=document.createElement('button');e.className='qi'+(it[0]===S.grp?' on':'');e.setAttribute('data-f','1');e.innerHTML='<span></span><small></small>';e.firstChild.textContent=it[0];if(it[2]){e.lastChild.className='live';e.lastChild.textContent='LIVE'}else e.lastChild.textContent=it[1];
   e.onclick=function(){S.grp=it[0];ls.s('dtv_grp',it[0]);closeModal();filter();var f=chs.querySelector('.row');if(f&&bodyTv())f.focus()};b.appendChild(e)});
  openModal($('mG'),b.querySelector('.on'));
 }
@@ -704,8 +738,11 @@ function chain(c,loc){
  return out;
 }
 function needPx(s){return s.m!=='file'&&!!s.p&&(!!s.x||S.pm==='always'||(location.protocol==='https:'&&/^http:/i.test(s.u)))}
-function play(c){
- clearTimeout(S.afT);S.afOn=true;S.cur=c;app.classList.remove('drawer');ls.s('dtv_l3',c.i);S.qs={v:-1,a:0};v.style.visibility='';
+function play(c,keep){
+ clearTimeout(S.afT);S.afOn=true;S.cur=c;app.classList.remove('drawer');ls.s('dtv_l3',c.i);
+ /* keep=true (sambung ulang otomatis): pilihan resolusi pengguna JANGAN kembali ke Otomatis */
+ if(!(keep===true&&S.qs)){S.qs={v:-1,a:0};S.vlock=null;S.vt=null;S.hq=null}
+ v.style.visibility='';
  $('tNum').textContent=S.num[c.i]||'';$('tName').textContent=c.n;$('tGrp').textContent=c.g;
  $('nName').textContent=c.n;$('nGrp').textContent=c.g+(c.s.length>1?' · '+c.s.length+' sumber':'');$('nNum').textContent=S.num[c.i]||'';logo(c,$('nLg'));
  mark();paintPn();showUI();
@@ -792,8 +829,18 @@ function playHls(src,bad){
   var rec=0;S.mv=null;S.mvLock=false;S.mvCur=-1;S.mvSrc=src;
   h.on(Hls.Events.MANIFEST_LOADED,function(_,d){if(S.mvLock||!d||!d.levels)return;S.mv=d.levels.map(function(l){return{u:(l.url instanceof Array?l.url[0]:l.url),w:l.width||0,h:l.height||0,b:l.bitrate||0,n:l.name||''}})});
   h.loadSource(src);h.attachMedia(v);
-  h.on(Hls.Events.MANIFEST_PARSED,tryPlay);
-  h.on(Hls.Events.ERROR,function(_,d){if(!d.fatal)return;if(d.type===Hls.ErrorTypes.MEDIA_ERROR&&!rec++)h.recoverMediaError();else bad((d.details||d.type)+(d.response&&d.response.code?' HTTP '+d.response.code:''))});
+  h.on(Hls.Events.MANIFEST_PARSED,function(){
+   var q=S.qs&&S.qs.v;
+   if(typeof q==='number'&&q>=0&&S.hq){var k=hlsPick(h,S.hq);if(k>=0){S.qs.v=q=k;h.nextLevel=k}else{S.qs.v=-1;S.hq=null;toast('Resolusi pilihan tidak ada di sumber ini, kembali ke Otomatis')}}
+   else if(q!==-1&&q!=='none'){try{applyQ()}catch(e){}}
+   tryPlay()});
+  /* penjaga: bila resolusi terkunci tapi pemutar berpindah level sendiri, kembalikan & catat penyebabnya di konsol */
+  h.on(Hls.Events.LEVEL_SWITCHED,function(_,d){var q=S.qs&&S.qs.v;if(typeof q==='number'&&q>=0&&S.mvCur<0&&d.level!==q&&h.levels[q]){console.warn('[DTV] HLS pindah level sendiri',d.level,'->',q);h.nextLevel=q}});
+  var nrec=0;h.on(Hls.Events.FRAG_BUFFERED,function(){nrec=0});
+   h.on(Hls.Events.ERROR,function(_,d){if(!d.fatal)return;
+    /* sudah tayang lalu jaringan/server putus sebentar (mis. unexpected EOF): coba muat ulang di sumber yang SAMA, jangan pindah sumber (pindah sumber = resolusi berubah + buffering) */
+    if(d.type===Hls.ErrorTypes.NETWORK_ERROR&&v.currentTime>0&&nrec++<4){console.warn('[DTV] HLS jaringan putus, sambung ulang',nrec,d.details);setTimeout(function(){if(S.hls===h)h.startLoad()},700*nrec);return}
+    if(d.type===Hls.ErrorTypes.MEDIA_ERROR&&!rec++)h.recoverMediaError();else bad((d.details||d.type)+(d.response&&d.response.code?' HTTP '+d.response.code:''))});
  }else if(v.canPlayType('application/vnd.apple.mpegurl')){v.src=src;tryPlay()}
  else bad('browser tidak mendukung HLS');
 }
@@ -846,6 +893,20 @@ function drmWhy(e,bad){
  var b=shWhy(e);
  drmProbe().then(function(o){bad(b+' ['+drmText(o)+']')},function(){bad(b)});
 }
+/* Kunci resolusi DASH: bukan hanya mematikan ABR, tapi juga MEMBATASI varian yang boleh dipilih hanya ke resolusi itu.
+   Mematikan ABR saja tidak cukup: Shaka tetap memilih ulang varian saat ganti periode/manifest live diperbarui/ukuran layar berubah. */
+function shRestr(l){var r={minHeight:0,maxHeight:Infinity,minBandwidth:0,maxBandwidth:Infinity};
+ if(l){if(l.h){r.minHeight=l.h;r.maxHeight=l.h}if(l.b){r.minBandwidth=l.b;r.maxBandwidth=l.b}}return r}
+function shLock(sp,t){
+ S.vlock={h:t.height||0,b:t.bandwidth||0};
+ try{sp.configure({abr:{enabled:false,restrictToElementSize:false,restrictToScreenSize:false}})}catch(e){}
+ try{sp.selectVariantTrack(t,false,8)}catch(e){}          /* tanpa mengosongkan buffer -> tidak buffering */
+ try{sp.configure({restrictions:shRestr(S.vlock)})}catch(e){}
+}
+function shUnlock(sp){
+ S.vlock=null;
+ try{sp.configure({restrictions:shRestr(null),abr:{enabled:true,restrictToElementSize:true,restrictToScreenSize:true}})}catch(e){}
+}
 function playDash(s,src,bad,id){
  lib('shaka').then(function(){
   if(id!==S.aid)return;
@@ -866,9 +927,19 @@ function playDash(s,src,bad,id){
     var sv={};sv[ksys]=lc.url;c.drm={servers:sv,retryParameters:{maxAttempts:3,baseDelay:500,timeout:15000}};
    }
   }
+  if(S.vlock){c.abr.enabled=false;c.abr.restrictToElementSize=false;c.abr.restrictToScreenSize=false;c.restrictions=shRestr(S.vlock)}
   p.configure(c);
+  function snap(){try{var a=p.getVariantTracks();S.vt=S.vt||[];a.forEach(function(t){if(!S.vt.some(function(o){return o.height===t.height&&o.bandwidth===t.bandwidth}))S.vt.push(t)})}catch(x){}}
+  function ok(){snap();tryPlay()}
+  p.addEventListener('trackschanged',snap);
+  p.addEventListener('variantchanged',function(){if(S.vlock)try{var t=p.getVariantTracks().filter(function(x){return x.active})[0];if(t&&t.height!==S.vlock.h)console.warn('[DTV] Shaka pindah varian sendiri',t.height,'!=',S.vlock.h)}catch(x){}});
   try{p.getNetworkingEngine().registerRequestFilter(function(t,r){
-   if(t===shaka.net.NetworkingEngine.RequestType.LICENSE){for(var k in lh)r.headers[k]=lh[k];return}
+   if(t===shaka.net.NetworkingEngine.RequestType.LICENSE){for(var k in lh)r.headers[k]=lh[k];
+    /* lisensi DRM lewat server (bukan langsung dari browser): bebas CORS dan ditandatangani server (IonTV). Token header sama dengan sumbernya; relay lewat node tetap memakai server utama */
+    var pm=String(src||'').match(/^(https?:\/\/[^/]+)\/(?:nx\/[\w-]+\/)?([^/]+)\/https?\/[^/]+/),pb=pm?pm[1]+'/'+pm[2]:(BASE?BASE+'/e30':'');
+    if(pb)r.uris=r.uris.map(function(u){try{var z=new URL(u,location.href);if(z.protocol!=='http:'&&z.protocol!=='https:')return u;if(z.href.indexOf(pb+'/')===0||z.origin===location.origin&&/^\/[^/]+\/https?\//.test(z.pathname))return u;
+     return pb+'/'+z.protocol.slice(0,-1)+'/'+z.host+z.pathname+z.search}catch(e){return u}});
+    return}
    if(!src||!/^https?:\/\//i.test(src))return;
    var m=src.match(/^(https?:\/\/[^/]+)\/([^/]+)\/https?:\/\/[^/]+/);if(!m)return;
    var px=m[1]+'/'+m[2];
@@ -883,7 +954,12 @@ function playDash(s,src,bad,id){
    if(retry&&c0===6001&&ksys&&ksys!=='org.w3.clearkey'&&tr<RB.length){      /* coba tingkat robustness yang lebih longgar */
     var adv={};adv[ksys]={videoRobustness:RB[tr],audioRobustness:RB[tr]};tr++;
     try{p.configure({drm:{advanced:adv}})}catch(x){}
-    return p.load(src).then(tryPlay).catch(function(e2){fail(e2,true)});
+    return p.load(src).then(ok).catch(function(e2){fail(e2,true)});
+   }
+   if(c0===4012&&S.vlock){          /* resolusi terkunci tidak ada di sumber ini: lepas kunci, ulangi */
+    S.vlock=null;S.qs.v=-1;toast('Resolusi pilihan tidak ada di sumber ini, kembali ke Otomatis');
+    try{shUnlock(p)}catch(x){}
+    return p.load(src).then(ok).catch(function(e2){fail(e2,false)});
    }
    if(c0===6001||c0===6002||c0===6010)return drmWhy(e,bad);
    bad(shWhy(e));
@@ -893,18 +969,18 @@ function playDash(s,src,bad,id){
    if(S.shaka!==p||!e.detail||e.detail.severity!==2)return;
    if(v.currentTime>0&&rec++<3){                 /* sudah pernah tayang lalu putus: sambung ulang dulu, jangan langsung menyerah */
     try{if(p.retryStreaming&&p.retryStreaming())return}catch(x){}
-    setTimeout(function(){if(S.shaka===p&&S.cur)play(S.cur)},800);return;
+    setTimeout(function(){if(S.shaka===p&&S.cur)play(S.cur,true)},800);return;
    }
    fail(e,false);
   });
-  p.attach(v).then(function(){return p.load(src)}).then(tryPlay).catch(function(e){fail(e,true)});
+  p.attach(v).then(function(){return p.load(src)}).then(ok).catch(function(e){fail(e,true)});
  }).catch(function(e){bad(shWhy(e))});
 }
 function rememberOk(){var a=S.curA;if(!a||a.done)return;a.done=true;try{fetch(BASE+'/api/using',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:a.c,u:a.u,px:a.px,us:a.us,nd:a.nd||''})}).catch(function(){})}catch(e){}   /* lapor ke server: sumber ini yang tayang (tampil di panel admin) */
  if(a.nd)return;
  var m=ls.g('dtv_ok',{}),ks=Object.keys(m);if(ks.length>300&&!m[a.c])delete m[ks[0]];m[a.c]={u:a.u,px:a.px};ls.s('dtv_ok',m)}
 v.onplaying=function(){clearTimeout(S.wd);clearTimeout(S.wt);$('st').className='state hide';if(S.modal===$('mE'))closeModal();rememberOk();armFull()};
-v.onwaiting=function(){clearTimeout(S.wt);S.wt=setTimeout(function(){if(S.cur&&!v.paused)play(S.cur)},30000)};  // macet lama: sambung ulang
+v.onwaiting=function(){clearTimeout(S.wt);S.wt=setTimeout(function(){if(S.cur&&!v.paused)play(S.cur,true)},30000)};  // macet lama: sambung ulang
 v.onerror=function(){if(S.shaka||S.hls||S.ts||!S.bad)return;S.bad(v.error?'media error '+v.error.code+(v.error.message?' '+v.error.message:''):'media error')};
 v.onvolumechange=function(){$('bM').innerHTML=ic(v.muted||v.volume===0?'mute':'vol')};v.onvolumechange();
 $('bM').onclick=function(){v.muted=!v.muted};
@@ -971,7 +1047,7 @@ function paintQ(){
  }
  if(S.qt==='v'){
   it=[['none','Tidak ada'],[-1,'Otomatis']];
-  if(sp){var seen={};sp.getVariantTracks().sort(function(a,b){return a.height-b.height}).forEach(function(t){var k=t.height+'x'+t.bandwidth;if(seen[k])return;seen[k]=1;it.push([t.id,(t.width&&t.height?t.width+' × '+t.height+', ':'')+(t.bandwidth/1e6).toFixed(2)+' Mbps'])})}
+  if(sp){var seen={},vt=(S.vt&&S.vt.length)?S.vt:sp.getVariantTracks();vt.slice().sort(function(a,b){return((a.height||0)-(b.height||0))||((a.bandwidth||0)-(b.bandwidth||0))}).forEach(function(t){var k=t.height+'x'+t.bandwidth;if(seen[k])return;seen[k]=1;it.push(['s'+k,(t.width&&t.height?t.width+' × '+t.height+', ':'')+(t.bandwidth/1e6).toFixed(2)+' Mbps'])})}
   else if(h){
    var raw=S.mv||[];
    if(raw.length>1&&raw.length>h.levels.length){
@@ -987,6 +1063,11 @@ function paintQ(){
   e.onclick=function(){S.qs[S.qt]=x[0];applyQ();paintQ();var n=b.querySelector('.on');if(n)n.focus()};b.appendChild(e)});
  if(one){var pn=document.createElement('p');pn.className='empty';pn.textContent='Sumber ini hanya menyediakan satu kualitas.';b.appendChild(pn)}
 }
+function hlsPick(h,q){            /* cari level yang cocok dengan pilihan (tinggi + bitrate terdekat), bukan nomor urut */
+ if(!q)return -1;var best=-1,bd=1e18;
+ h.levels.forEach(function(l,i){if((l.height||0)!==q.h)return;var d=Math.abs((l.bitrate||0)-q.b);if(d<bd){bd=d;best=i}});
+ return best;
+}
 function qLabel(w,hh,b,n,i){
  var p=[];if(w&&hh)p.push(w+' × '+hh);else if(hh)p.push(hh+'p');
  if(b>0)p.push((b/1e6).toFixed(2)+' Mbps');
@@ -995,11 +1076,11 @@ function qLabel(w,hh,b,n,i){
 }
 function applyQ(){
  var sp=S.shaka,h=S.hls,id=S.qs.v;
- if(sp){if(id==='none')v.style.visibility='hidden';else{v.style.visibility='';if(id===-1)sp.configure({abr:{enabled:true}});else{var t=sp.getVariantTracks().filter(function(t){return t.id===id})[0];if(t){sp.configure({abr:{enabled:false}});sp.selectVariantTrack(t,true)}}}}
+ if(sp){if(id==='none')v.style.visibility='hidden';else{v.style.visibility='';if(id===-1)shUnlock(sp);else if(typeof id==='string'&&id.charAt(0)==='s'){var t=(S.vt||[]).filter(function(t){return 's'+t.height+'x'+t.bandwidth===id})[0];if(t)shLock(sp,t)}}}
  if(h){
-  if(id==='none'){v.style.visibility='hidden';if(S.mvCur<0)h.currentLevel=0}
+  if(id==='none'){v.style.visibility='hidden';if(S.mvCur<0)h.nextLevel=0}
   else if(typeof id==='string'&&id.charAt(0)==='m'){v.style.visibility='';var k=+id.slice(1),m=S.mv&&S.mv[k];if(m&&m.u&&S.mvCur!==k){S.mvCur=k;S.mvLock=true;h.loadSource(m.u)}}
-  else{v.style.visibility='';if(S.mvCur>=0){S.mvCur=-1;S.mvLock=false;h.loadSource(S.mvSrc)}else h.currentLevel=id}
+  else{v.style.visibility='';if(S.mvCur>=0){S.mvCur=-1;S.mvLock=false;h.loadSource(S.mvSrc)}else{var lv=h.levels[id];if(lv)S.hq={h:lv.height||0,b:lv.bitrate||0};h.nextLevel=id}}      /* nextLevel = pindah mulus tanpa membuang seluruh buffer (currentLevel memicu buffering) */
   if(h.audioTracks.length)h.audioTrack=S.qs.a}
 }
 function openQ(){if(!S.cur)return;S.qt='v';paintQ();refreshNodes();openModal($('mQ'),$('qb').querySelector('.on')||$('qb').querySelector('.qi')||$('qOk'))}
@@ -1162,6 +1243,7 @@ function boot(again){
 }
 boot();
 setInterval(refresh,60000);
+setInterval(tickEv,10000);      /* badge jam -> SEDANG LIVE -> Selesai berganti sendiri tanpa menunggu data baru dari server */
 })();
 </script>
 
